@@ -26,7 +26,7 @@ declare global {
 }
 
 async function startGame(page: Page) {
-  await page.goto('/?test=1');
+  await page.goto(process.env.CI ? '/?test=1&software=1' : '/?test=1');
   await expect(page.locator('#start-button')).toBeVisible();
   await activate(page, page.locator('#start-button'));
   await expect(page.locator('#star-button')).toBeVisible();

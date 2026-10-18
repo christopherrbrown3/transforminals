@@ -148,7 +148,10 @@ export class Game {
       powerPreference: 'high-performance',
       alpha: false,
     });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    const query = new URLSearchParams(location.search);
+    // Headless CI has a software GPU. Keep CSS/input geometry unchanged while rendering fewer pixels.
+    const softwareTest = query.has('test') && query.has('software');
+    this.renderer.setPixelRatio(softwareTest ? 0.5 : Math.min(window.devicePixelRatio, 1.5));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.2;

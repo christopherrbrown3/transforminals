@@ -17,3 +17,5 @@ Four landscape screenshots are captured at 1194×834 using WebKit iPad emulation
 ## Reporting
 
 Keep an evidence link or note in the relevant issue or development log. Clearly distinguish automated browser coverage, desktop manual checks, and physical-device testing. An untested item stays Pending; partial work stays In progress. Report failed checks and known gaps alongside passes. Test output and screenshots under `test-results/` are local artifacts and are not committed.
+
+CI gameplay sessions opt into `?test=1&software=1`, which renders the 3D canvas at half device scale to avoid software-GPU contention. CSS viewport, touch targets, real scene/models, movement, collisions, and save logic are unchanged. Local gameplay runs, visual captures, and production offline tests retain normal rendering.
