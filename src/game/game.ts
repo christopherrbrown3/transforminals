@@ -746,7 +746,7 @@ export class Game {
       7,
       'victory',
       () => {
-        this.removeBoss();
+        if (!replay) this.removeBoss();
         if (this.celebration) {
           this.region.remove(this.celebration);
           disposeObject(this.celebration);
@@ -792,6 +792,8 @@ export class Game {
     this.saves.save();
   }
   private reset() {
+    // Pagehide must not autosave the old region over the fresh adventure.
+    this.state = 'menu';
     this.saves.reset();
     location.reload();
   }
@@ -1023,7 +1025,7 @@ export class Game {
     } else if (this.timeline && !this.saves.data.settings.reducedMotion) {
       const t = this.timeline.elapsed;
       desired = new THREE.Vector3(this.player.x + Math.sin(t * 0.25) * 7, 11, this.player.z + 15);
-      if (this.encounter)
+      if (this.encounter && this.timeline.kind !== 'victory')
         target.set(this.encounter.model.position.x, 2, this.encounter.model.position.z);
     }
     // Lift the camera above any nearby scenery in its follow corridor.
