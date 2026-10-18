@@ -1,0 +1,35 @@
+# Game design
+
+## Player promise
+
+Transforminals is a cheerful, forgiving exploration game for children ages 6–10. The player explores a connected toy-like world, rescues animals by landing on broad low cages, and can then transform into each rescued creature. Exploration has no game-over state: hazards and boss attacks return the player safely to play.
+
+## Core loop
+
+Explore a readable region, follow landmarks or animal hints, jump onto an easy-to-reach cage, celebrate the rescue, then try the new creature and its ability. Required rescues advance the main adventure; optional wildlife and surprises add delight without affecting the final gate.
+
+## Player and controls
+
+The player starts as a human in Meadow. Landscape iPad touch controls are primary: a creature selector on the left, movement on the right, and a prominent star action button. Keyboard and mouse remain available. The camera follows automatically. Teach movement, jumping, rescue, transformation, and an ability through short in-world prompts.
+
+## Transformations and rescue
+
+Jumping onto a wide, low cage rescues its animal. The rescue is idempotent and permanently unlocks that form. Transformations are immediate or nearly so, reversible, and cost no resource. Every form has a distinct look and at least one useful or amusing trait. The rescue set is explicit game data and is separate from ambient wildlife.
+
+## World
+
+The planned connected regions are Meadow, Winter, Savannah, Desert, Beach, Ocean/Atlantis, Lava, Underground, Nether-inspired dimension, and City. Each needs a distinct palette, landmarks, approachable routes, rescue content, and local wildlife. Ocean movement permits easy vertical swimming without drowning. The Nether-inspired portal and return route are visible and original. City exploration is possible before the finale; only the final arena is gated by all required rescues.
+
+## Creatures and character content
+
+Required creatures include an Arctic fox; tiger, lion, giraffe, and hippopotamus; sharks, piranhas, barracudas, whale shark, kraken, and leviathan; and city rat, peregrine falcon, giant cow, plus original giant reptile and mechanical reptile characters where rights to franchise characters are unavailable. Baby Godzilla and the final demon lizard are concepts in the brief; public implementation must use suitable original designs unless rights permit. Boy siren is explicitly permitted and sings an original jazz-inspired motif. No mermaids.
+
+Wildlife NPCs wander, react, and provide authored contextual hints. The optional punch-like interaction is a harmless wobble or bounce. Animals never fight back or appear injured.
+
+## Bosses and ending
+
+Plan for five or six bosses total, including a friendly baby giant-lizard mini-boss, an original comedic toilet monster with a flush-and-spin defeat, two or three biome mini-bosses, and the final demon lizard. Bosses use readable slow patterns and cannot kill the player. The final arena stays locked until all required cages are rescued. Five forgiving head stomps defeat the final boss; three hearts communicate health at clear milestones. The short, skippable finale uses harmless colorful effects, rescued animals, “THANK YOU!”, and a fanfare. The boss is completed only once, and exploration continues afterward.
+
+## Tone, accessibility, and sound
+
+Use colorful, blocky, toy-like original art, expressive silhouettes, playful effects, short readable dialogue, gentle music, and clear feedback. Support mute/volume and reduced motion where practical. Avoid disturbing imagery, copyrighted music, and external runtime services.

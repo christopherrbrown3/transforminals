@@ -1,0 +1,32 @@
+name: Feature request
+description: Propose a game feature or quality improvement.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: Player experience
+      description: What should the player be able to do or discover?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Describe observable behavior that would show this is complete.
+    validations:
+      required: true
+  - type: dropdown
+    id: type
+    attributes:
+      label: Area
+      options:
+        - Gameplay
+        - World or creature content
+        - Touch/accessibility
+        - Audio/art
+        - Performance
+        - PWA/deployment
+        - Testing/documentation
+    validations:
+      required: true
