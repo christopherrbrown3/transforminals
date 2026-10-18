@@ -14,7 +14,7 @@ The public source repository is [christopherrbrown3/transforminals](https://gith
 - The certificate reached `approved`, covers that hostname, and reports expiry 2027-01-16.
 - HTTPS enforcement was enabled. The foundation URL returned HTTPS 200.
 
-The foundation workflow [39137253759](https://github.com/christopherrbrown3/transforminals/actions/runs/39137253759) succeeded. The full playable release must be checked separately after its merge; see the development log for its release evidence.
+The foundation workflow [39137253759](https://github.com/christopherrbrown3/transforminals/actions/runs/39137253759) succeeded. The playable runtime `b5dd43723e937c34ac2dea89b71215b23c432549` was subsequently published by [run 39160880364](https://github.com/christopherrbrown3/transforminals/actions/runs/39160880364) and verified on the public domain with a WebKit rescue/transformation flow. See the development log for evidence.
 
 ### Namecheap instructions if the existing record is removed
 

@@ -21,3 +21,7 @@ Keep an evidence link or note in the relevant issue or development log. Clearly 
 CI gameplay sessions opt into `?test=1&software=1`, which renders the 3D canvas at half device scale to avoid software-GPU contention. CSS viewport, touch targets, real scene/models, movement, collisions, and save logic are unchanged. Local gameplay runs, visual captures, and production offline tests retain normal rendering.
 
 CI Chromium explicitly selects its bundled SwiftShader backend. A local probe verified that backend through WebGL renderer metadata and completed a real cage rescue and transformation. This avoids depending on a hosted runner's virtual GPU.
+
+## Release evidence
+
+All 20 gameplay cases and both offline cases passed locally. The main quality/Pages run and public-origin rescue evidence are recorded in [the development log](DEVELOPMENT_LOG.md). Visual captures are local artifacts in `output/playwright/`; observed WebKit glyph rendering is tracked in issue #13 for physical-device review.
