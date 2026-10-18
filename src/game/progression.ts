@@ -1,7 +1,7 @@
 import { CREATURES } from './data';
 export const SAVE_VERSION=2;
-export interface SaveData {version:number;rescued:string[];defeated:string[];discovered:string[];portals:string[];location:{biome:string;x:number;z:number};settings:{muted:boolean;volume:number;reducedMotion:boolean};}
-export const freshSave=():SaveData=>({version:SAVE_VERSION,rescued:[],defeated:[],discovered:['meadow'],portals:['meadow'],location:{biome:'meadow',x:0,z:7},settings:{muted:false,volume:0.35,reducedMotion:false}});
+export interface SaveData {version:number;form:string;rescued:string[];defeated:string[];discovered:string[];portals:string[];location:{biome:string;x:number;z:number};settings:{muted:boolean;volume:number;reducedMotion:boolean};}
+export const freshSave=():SaveData=>({version:SAVE_VERSION,form:'human',rescued:[],defeated:[],discovered:['meadow'],portals:['meadow'],location:{biome:'meadow',x:0,z:7},settings:{muted:false,volume:0.35,reducedMotion:false}});
 export function canEnterFinal(rescued:readonly string[]) {return CREATURES.every(c=>rescued.includes(c.id));}
 export function rescue(save:SaveData,id:string) {if(!CREATURES.some(c=>c.id===id)||save.rescued.includes(id))return false; save.rescued.push(id);return true;}
 export function canTransform(save:SaveData,id:string){return id==='human'||save.rescued.includes(id);}

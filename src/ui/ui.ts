@@ -26,7 +26,7 @@ export class UI {
  this.renderForms();
  }
  el(id:string){return this.root.querySelector<HTMLElement>(`#${id}`)!;}
- private bindHold(el:HTMLElement,fn:(down:boolean)=>void){el.addEventListener('pointerdown',event=>{event.preventDefault();el.setPointerCapture(event.pointerId);el.classList.add('pressed');fn(true);});const release=()=>{el.classList.remove('pressed');fn(false);};el.addEventListener('pointerup',release);el.addEventListener('pointercancel',release);el.addEventListener('lostpointercapture',release);}
+ private bindHold(el:HTMLElement,fn:(down:boolean)=>void){el.addEventListener('pointerdown',event=>{event.preventDefault();try{el.setPointerCapture(event.pointerId);}catch{/* Synthetic or already cancelled pointer. */}el.classList.add('pressed');fn(true);});const release=()=>{el.classList.remove('pressed');fn(false);};el.addEventListener('pointerup',release);el.addEventListener('pointercancel',release);el.addEventListener('lostpointercapture',release);}
  renderForms(current=this.form){this.form=current;const key=`${current}:${this.save.rescued.join(',')}`;if(key===this.previousForms)return;this.previousForms=key;
  const unlocked=[HUMAN,...CREATURES.filter(c=>this.save.rescued.includes(c.id))];this.el('forms').innerHTML=unlocked.map(c=>`<button class="form-button ${c.id===current?'selected':''}" data-form="${c.id}" aria-label="Transform into ${c.name}" aria-pressed="${c.id===current}" style="--creature-color:${c.color}">${portrait(c.id,c.color)}<span>${c.id==='human'?'Calvin':c.name}</span></button>`).join('');
  this.root.querySelectorAll<HTMLButtonElement>('[data-form]').forEach(b=>b.onclick=()=>this.actions.form(b.dataset.form!));

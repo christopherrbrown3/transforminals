@@ -8,6 +8,7 @@ export function migrateSave(input:unknown):SaveData {
  if(typeof raw.version==='number'&&raw.version>SAVE_VERSION) throw new Error('A newer Transforminals save needs a newer game version.');
  const strings=(value:unknown,valid:string[])=>Array.isArray(value)?[...new Set(value.filter((v):v is string=>typeof v==='string'&&valid.includes(v)))]:[];
  base.rescued=strings(raw.rescued??raw.unlocked,CREATURES.map(c=>c.id));
+ base.form=typeof raw.form==='string'&&(raw.form==='human'||base.rescued.includes(raw.form))?raw.form:'human';
  base.defeated=strings(raw.defeated,BOSSES.map(b=>b.id));
  if(base.defeated.includes('demon-lizard')) base.rescued=CREATURES.map(c=>c.id);
  base.discovered=[...new Set(['meadow',...strings(raw.discovered,BIOMES.map(b=>b.id))])];
