@@ -512,8 +512,16 @@ export class Game {
     this.ui.renderForms(this.form);
     this.ui.toast(`${getCreature(cage.id).name} rescued! Tap your new friend on the left.`);
     this.saves.save();
-    if (canEnterFinal(this.saves.data.rescued))
+    if (canEnterFinal(this.saves.data.rescued)) {
       this.ui.toast('Every friend is free! The Demon Lizard arena in Big Little City is open!');
+      // The last cage may be in this region: open the arena immediately, without a reload.
+      if (this.gate) {
+        this.region.remove(this.gate);
+        disposeObject(this.gate);
+        this.gate = null;
+        this.addBoss();
+      }
+    }
     this.updateGuide();
   }
   private addPortals() {
@@ -701,7 +709,7 @@ export class Game {
     this.updateGuide();
   }
   private victory(replay: boolean) {
-    if (this.state === 'menu') return;
+    if (this.state === 'menu' || this.timeline || this.celebration) return;
     this.celebrationTime = 0;
     this.celebration = new THREE.Group();
     this.region.add(this.celebration);
