@@ -4,7 +4,7 @@ export default defineConfig({
   testDir: './tests',
   testIgnore: ['**/pwa/**'],
   fullyParallel: true,
-  workers: 2,
+  workers: process.env.CI ? 1 : 2,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? 'github' : 'list',
