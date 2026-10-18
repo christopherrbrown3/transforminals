@@ -1,31 +1,60 @@
 # Transforminals
 
-Transforminals is a browser-based, open-world 3D creature rescue and transformation adventure for iPad and desktop. The game is in active development; this repository currently tracks the implementation and its requirements, and the public playable build has not yet been declared complete.
+**A wild adventure by Calvin.** Rescue animals by jumping onto their cages, become your new friends, and explore a colorful 3D toy world. No lives, no drowning, and no game over.
 
-The project aims to pair relaxed exploration with easy cage-top animal rescues, permanent creature transformations, friendly boss encounters, and a colorful connected world. The target is a static site on GitHub Pages that can be installed and played offline after its assets are cached.
+[Play Transforminals](https://transforminals.christopherbrown.ai) · [Requirements and evidence](docs/REQUIREMENTS.md) · [Development plan](docs/DEVELOPMENT_PLAN.md)
+
+## The first playable release
+
+Version 0.1 connects ten compact environments: Clover Meadow, Snowcone Valley, Sunbeam Savannah, Wobble Dunes, Bubble Bay, Atlantis, Popcorn Peaks, Twinkle Caverns, the Giggle Rift, and Big Little City. There are 22 required animal rescues and transformations, wandering wildlife, six original bosses, local autosaves, original synthesized music, and a skippable thank-you party. The final arena opens after every required rescue; five head boops defeat the Demon Lizard while three hearts show its remaining health. Exploration continues afterward.
+
+This is a playable first release, with an explicit backlog for deeper biome exploration and polish. Physical iPad installation, touch feel, sustained performance, and a real two-version update test still need device/release validation. Automated WebKit tests use an iPad-like profile; they are not physical iPad testing.
+
+## How to play
+
+- Use the big arrows on the right to move and the star to jump or use your form's power.
+- Land on a cage roof to rescue its animal. Tap its portrait on the left, or open Friends, to transform.
+- Hold the star to fly or swim upward. Release it to glide or drift down. All forms can explore on land.
+- Walk through a labeled glowing ring to visit another region. The map revisits discovered regions and always offers Return to Meadow.
+- On desktop, use WASD or arrow keys, Space, M for the map, and Escape for pause. H returns to Meadow.
+
+Saves stay in this browser on this device. There is no account or cloud save. Start a new adventure from pause/settings only after confirming the reset.
+
+## iPad and offline play
+
+Open the game in Safari, then use **Share → Add to Home Screen**. Landscape offers the most room. Open once online and let the game cache before leaving the network. All runtime libraries, models, fonts, and synthesized audio are local; no CDN, external API, backend, or paid hosting is required. Updates download in the background and activate from the menu or through a player-selected save-and-update button, with cutscenes deferred.
 
 ## Development
 
-Requirements: Node.js 22 and npm.
+Use Node.js 22.12 or newer and npm.
 
 ```sh
 npm ci
 npm run dev
 ```
 
-The available project checks are `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, and `npm run test:e2e`. Browser tests use Playwright; install its browsers with `npx playwright install chromium webkit` when needed.
+```sh
+npm run check
+npx playwright install chromium webkit
+npm run test:e2e
+npm run test:pwa
+```
+
+`check` runs TypeScript, ESLint, Vitest, and a production build. Browser gameplay tests use Chromium and WebKit; PWA tests use the production preview. The test setup API is available only at `?test=1`. Normal gameplay does not expose it.
 
 ## Project documents
 
-- [Original brief](docs/ORIGINAL_BRIEF.md) — Calvin's full brief and acceptance expectations.
-- [Game design](docs/GAME_DESIGN.md) — gameplay rules and content direction.
-- [Technical architecture](docs/TECHNICAL_ARCHITECTURE.md) — runtime structure and engineering decisions.
-- [Requirements](docs/REQUIREMENTS.md) — tracked requirements and implementation status.
-- [Development plan](docs/DEVELOPMENT_PLAN.md) — phased milestones.
-- [Testing](docs/TESTING.md) — automated and manual test coverage.
-- [Development log](docs/DEVELOPMENT_LOG.md) — dated implementation notes.
-- [Deployment](docs/DEPLOYMENT.md) — Pages and custom-domain release procedure.
+- [Original brief](docs/ORIGINAL_BRIEF.md)
+- [Game design](docs/GAME_DESIGN.md)
+- [Technical architecture and content extension](docs/TECHNICAL_ARCHITECTURE.md)
+- [Art direction](docs/ART_DIRECTION.md)
+- [Requirements matrix](docs/REQUIREMENTS.md)
+- [Development plan](docs/DEVELOPMENT_PLAN.md)
+- [Testing](docs/TESTING.md)
+- [Development log](docs/DEVELOPMENT_LOG.md)
+- [Deployment](docs/DEPLOYMENT.md)
+- [Assets and attribution](docs/ASSETS.md)
 
-## License and assets
+## License
 
-Original project code is licensed under MIT; see [LICENSE](LICENSE). Asset rights are tracked separately. Do not assume the code license applies to third-party or generated assets; see the attribution guidance in the development documentation.
+Original code and original project art use the [MIT license](LICENSE). Third-party dependencies and Fredoka retain their own licenses; see the asset register and bundled `public/licenses/`. All creatures and music are original interpretations. No ripped franchise assets are included.

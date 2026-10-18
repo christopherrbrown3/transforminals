@@ -2,14 +2,36 @@
 
 ## GitHub Pages
 
-The production target is `https://transforminals.christopherbrown.ai`. Build the site at `/` because this is a custom domain. The Pages workflow publishes from `main` after CI succeeds and uses GitHub's Pages artifact deployment. The workflow also writes the `CNAME` file into the artifact.
+The static production target is [transforminals.christopherbrown.ai](https://transforminals.christopherbrown.ai). Vite builds at `/` because this is a custom domain. The `CI and Pages` workflow checks main-branch changes before publishing a Pages artifact. Pull requests run quality checks without publishing. `public/CNAME` is retained in the output; the workflow also writes the same exact hostname.
 
-In repository settings, configure Pages to use GitHub Actions and set the custom domain to `transforminals.christopherbrown.ai`. Enable HTTPS after GitHub validates the domain and certificate. DNS is managed outside this repository; inspect the existing records before making any change, and never alter unrelated records. No DNS change is documented as complete by this repository setup.
+The public source repository is [christopherrbrown3/transforminals](https://github.com/christopherrbrown3/transforminals), with `main` as the default branch. GitHub Pages is configured for workflow deployment. Git operations use the authenticated `christopherrbrown3` account and project commits use that account's verified noreply identity.
+
+## Domain state observed on 2026-10-18
+
+- `transforminals.christopherbrown.ai` already resolved through CNAME to `christopherrbrown3.github.io`, with GitHub Pages A records.
+- No DNS records were changed. No apex or unrelated application configuration was touched.
+- GitHub Pages custom domain was set to `transforminals.christopherbrown.ai`.
+- The certificate reached `approved`, covers that hostname, and reports expiry 2027-01-16.
+- HTTPS enforcement was enabled. The foundation URL returned HTTPS 200.
+
+The foundation workflow [39137253759](https://github.com/christopherrbrown3/transforminals/actions/runs/39137253759) succeeded. The full playable release must be checked separately after its merge; see the development log for its release evidence.
+
+### Namecheap instructions if the existing record is removed
+
+No Namecheap change is needed in the observed configuration. If future DNS inspection shows the hostname missing, add only this record in the domain's Advanced DNS screen:
+
+| Type  | Host             | Value                          | TTL       |
+| ----- | ---------------- | ------------------------------ | --------- |
+| CNAME | `transforminals` | `christopherrbrown3.github.io` | Automatic |
+
+Check whether a wildcard already provides that mapping before adding a redundant entry. Do not alter `@`, `www`, mail records, or other application hostnames. After DNS resolves, check the Pages certificate and HTTPS enforcement independently.
 
 ## Release verification
 
-For each release, verify the Actions check and Pages deployment succeeded, then open the public custom-domain URL and inspect the served page and manifest. Check GitHub Pages domain/certificate state and HTTPS. A successful build or accepted deployment job alone does not establish public availability. Record the commit, workflow run, URL, and observed result in the development log. Physical iPad installation and offline behavior require device verification and must be reported separately from browser automation.
+Verify that the exact main commit passed quality checks and Pages deployment. Fetch live HTML, manifest, icons, service worker, and model assets; inspect the rendered game and a real rescue flow on the public domain. A local build or accepted job alone is not public availability. Test cached navigation and model access offline. Record the commit, run, URL, and result in the development log.
+
+Physical iPad Safari installation, hardware frame rate, memory under a long play session, and real update activation across two published versions remain separate checks. Browser automation cannot establish those results.
 
 ## Rollback
 
-Revert the offending release commit through the normal reviewed Git workflow and allow the Pages deployment to publish the prior state. Avoid editing DNS as a rollback mechanism for application releases.
+Revert the offending release through the normal Git workflow and let the checked Pages pipeline publish the prior application state. Preserve save compatibility and use the existing versioned migration path. Avoid DNS changes as an application rollback mechanism.
