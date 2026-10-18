@@ -10,7 +10,15 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   projects: [
-    { name: 'chromium-production-pwa', use: { ...devices['Desktop Chrome'] } },
+    {
+      name: 'chromium-production-pwa',
+      use: {
+        ...devices['Desktop Chrome'],
+        launchOptions: process.env.CI
+          ? { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] }
+          : undefined,
+      },
+    },
     {
       name: 'webkit-ipad-production-pwa',
       use: {
