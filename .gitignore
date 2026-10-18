@@ -6,3 +6,5 @@ test-results/
 playwright-report/
 *.tsbuildinfo
 .impeccable/
+
+.playwright-mcp/
