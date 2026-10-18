@@ -45,9 +45,7 @@ describe('rescue progression', () => {
   });
 
   it('shows the three boss hearts changing across five stomps', () => {
-    expect([0, 1, 2, 3, 4, 5].map((hits) => bossHearts(hits))).toEqual([
-      3, 3, 2, 2, 1, 0,
-    ]);
+    expect([0, 1, 2, 3, 4, 5].map((hits) => bossHearts(hits))).toEqual([3, 3, 2, 2, 1, 0]);
     expect(bossHearts(-4)).toBe(3);
     expect(bossHearts(99)).toBe(0);
   });

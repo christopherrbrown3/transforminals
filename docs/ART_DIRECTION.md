@@ -4,18 +4,18 @@ Transforminals is a handmade toy landscape: square trunks, chunky paws, broad fa
 
 ## Palette
 
-| Role | Colors |
-| --- | --- |
-| Warm paper / vanilla fur | `#FFF0CD`, `#F6E9D2` |
-| Ink / eyes | `#243C3B` |
-| Adventure teal | `#438F88` |
-| Friendly marmalade | `#E6873E` |
-| Celebration gold | `#FFD476` |
-| Meadow | `#8DBF76`, `#5F9C69`, `#C7E9DC` |
-| Snow | `#E6EFF1`, `#77AEB4`, `#C6DFEC` |
-| Savannah / sand | `#C7BF6D`, `#E4C68D`, `#F3D9B0` |
-| Seabed | `#95C7BB`, `#528EA4`, coral pink and lavender |
-| Lava / caves / rifts | warm gray, violet, peach lava, mint crystals |
+| Role                     | Colors                                        |
+| ------------------------ | --------------------------------------------- |
+| Warm paper / vanilla fur | `#FFF0CD`, `#F6E9D2`                          |
+| Ink / eyes               | `#243C3B`                                     |
+| Adventure teal           | `#438F88`                                     |
+| Friendly marmalade       | `#E6873E`                                     |
+| Celebration gold         | `#FFD476`                                     |
+| Meadow                   | `#8DBF76`, `#5F9C69`, `#C7E9DC`               |
+| Snow                     | `#E6EFF1`, `#77AEB4`, `#C6DFEC`               |
+| Savannah / sand          | `#C7BF6D`, `#E4C68D`, `#F3D9B0`               |
+| Seabed                   | `#95C7BB`, `#528EA4`, coral pink and lavender |
+| Lava / caves / rifts     | warm gray, violet, peach lava, mint crystals  |
 
 The environment keeps a lower contrast than faces, rescue effects, and controls. Lava is peach-orange rather than threatening red. The final lizard is a purple storybook monster with vanilla horns and an exaggerated friendly face.
 
@@ -43,18 +43,18 @@ The Blender fox contains two looping idle clips, one for its head and one for it
 
 The flat playable ground is an intentional accessibility choice. It supports easy cage landing and reliable movement while ornamental hills and silhouettes provide depth. Clear cream trails connect broad rescue pads. Trees have trunk collisions; flowers and small groundcover allow walking through them. Tall scenery is concentrated along the sides and northern background to avoid obscuring the player.
 
-| Region | Signature landmark and dressing |
-| --- | --- |
-| Meadow | giant storybook tree, flower patches, little fence |
-| Winter | layered snowy evergreens, ice pond, igloo, snow figures |
-| Savannah | wide acacias, watering hole, ocher rock outcrop |
-| Desert | stepped ruin, standing arch, cactus clusters, oasis |
-| Beach | palm trees, surf edge, jetty, sandcastle |
-| Ocean | Atlantis columns and pediment, toy shipwreck, coral and kelp |
-| Volcano | conical volcano, peach lava channel, bridge, basalt spires |
-| Underground | cave entrance, mint mushrooms, tall crystal clusters |
-| Rifts | hovering rock islands, magic crystal ring, violet pillars |
-| City | pastel buildings, street markings, central plaza |
+| Region      | Signature landmark and dressing                              |
+| ----------- | ------------------------------------------------------------ |
+| Meadow      | giant storybook tree, flower patches, little fence           |
+| Winter      | layered snowy evergreens, ice pond, igloo, snow figures      |
+| Savannah    | wide acacias, watering hole, ocher rock outcrop              |
+| Desert      | stepped ruin, standing arch, cactus clusters, oasis          |
+| Beach       | palm trees, surf edge, jetty, sandcastle                     |
+| Ocean       | Atlantis columns and pediment, toy shipwreck, coral and kelp |
+| Volcano     | conical volcano, peach lava channel, bridge, basalt spires   |
+| Underground | cave entrance, mint mushrooms, tall crystal clusters         |
+| Rifts       | hovering rock islands, magic crystal ring, violet pillars    |
+| City        | pastel buildings, street markings, central plaza             |
 
 `world.hazards` describes the volcanic channel away from the bridge; game logic owns friendly recovery. Environmental modules do not create cages, bosses, NPCs, or portals.
 
