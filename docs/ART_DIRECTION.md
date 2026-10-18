@@ -21,7 +21,7 @@ The environment keeps a lower contrast than faces, rescue effects, and controls.
 
 ## Character conventions
 
-- Every model faces negative Z. Feet sit at Y=0. Human height is 1.82 units including hair; the custom fox is 1.885 units including ears. Larger forms stay under roughly three units.
+- Every model faces negative Z. Feet sit at Y=0. Human height is approximately 1.9 units including hair; the custom fox is 1.885 units including ears. The game enlarges giant forms and the final boss at runtime.
 - Eyes use warm whites, deep evergreen pupils, and tiny highlights. Oversized ears, muzzles, feet, and tails make animals identifiable at the normal play camera distance.
 - The fox has a long vanilla-tipped tail, cream cheeks and chest, dark socks, pointed ears, and a button nose. Arctic fox shares the silhouette with a snowy coat. Tiger stripes, giraffe spots, cow patches, lion mane, camel hump, turtle shell, whale-shark spots, and reptile dorsal plates distinguish forms.
 - Bosses have conspicuous golden landing crowns. `group.userData.headHeight` gives the exact crown collision height: 2.49 for mini-bosses and 3.39 for the final lizard. Their large faces remain readable during movement.
@@ -29,7 +29,7 @@ The environment keeps a lower contrast than faces, rescue effects, and controls.
 
 ## Meshes and materials
 
-Use boxes, five-sided cones, and faceted polyhedra. The authored fox adds a small single-segment bevel to the box corners and weighted normals. Keep materials matte: roughness around 0.8–0.95, little or no metalness. Crystal/ember emission is restrained. No textures, remote images, or texture atlases are required by the current 3D assets.
+Use boxes, five-sided cones, and faceted polyhedra. Substantial creature blocks and environmental props have small single-segment bevels so their edges catch the sunlight. Tiny eyes, markings, and groundcover stay crisp. The authored fox uses beveled edges and weighted normals. Keep materials matte: roughness around 0.7–0.82, little or no metalness. Crystal/ember emission is restrained. No textures, remote images, or texture atlases are required by the current 3D assets.
 
 The procedural models are immediately available for every form. The Blender fox is a bundled GLB that can replace its procedural counterpart after local loading. Creature parts are independently disposable. Static sibling meshes are merged by material, while animated limb/head/tail groups retain their transforms and names. The same `batchCreatureMeshes` helper can be applied once to the loaded fox before making runtime clones. Environmental props are grouped by geometry/material into `InstancedMesh` batches; each region is built only when needed.
 
@@ -41,7 +41,11 @@ The Blender fox contains two looping idle clips, one for its head and one for it
 
 ## Environmental composition
 
-The flat playable ground is an intentional accessibility choice. It supports easy cage landing and reliable movement while ornamental hills and silhouettes provide depth. Clear cream trails connect broad rescue pads. Trees have trunk collisions; flowers and small groundcover allow walking through them. Tall scenery is concentrated along the sides and northern background to avoid obscuring the player.
+The flat playable ground is an intentional accessibility choice. It supports easy cage landing and reliable movement while ornamental hills and silhouettes provide depth. Cream trails have inset paving and low shoulders; planting islands, pebbles, flowers, and tree-root details add depth. Tall scenery is concentrated along the sides and northern background to avoid obscuring the player.
+
+Placement reserves the full canopy or prop footprint separately from its collision radius. Cages, all three portal locations, wandering NPCs, the boss arena, and connected walking routes have explicit clearance. New random props also clear existing landmarks. Trees use trunk collisions, substantial landmarks use several appropriate footprint colliders, and flowers and small groundcover remain walkable. `WorldObstacle.height` supplies the camera with real obstacle heights. Tall props cast shadows; flat groundcover and paths only receive them.
+
+The polish pass checked grid reachability from the start to all six cage locations and all three portals in every region, including the locked city arena, and checked collider separation from cage/portal/NPC envelopes. All locations passed. Worlds use 15–29 instanced batches plus their ground meshes and roughly 7,000–28,000 triangles before gameplay actors. Physical iPad performance still requires device testing.
 
 | Region      | Signature landmark and dressing                              |
 | ----------- | ------------------------------------------------------------ |

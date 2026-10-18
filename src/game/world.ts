@@ -1,14 +1,22 @@
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+export interface WorldObstacle {
+  x: number;
+  z: number;
+  radius: number;
+  height?: number;
+}
 
 export interface BuiltWorld {
   group: THREE.Group;
-  obstacles: Array<{ x: number; z: number; radius: number }>;
+  obstacles: WorldObstacle[];
   hazards: Array<{ x: number; z: number; radius: number }>;
   water: boolean;
   sky: number;
   ground: number;
 }
-type Shape = 'box' | 'rock' | 'cone' | 'cylinder';
+type Shape = 'box' | 'rounded' | 'rock' | 'cone' | 'cylinder';
 interface Stamp {
   position: [number, number, number];
   size: [number, number, number];
@@ -36,7 +44,16 @@ const cages = [
   [18, -29],
   [0, -32],
   [22, -8],
-  [0, -19],
+];
+const portals = [
+  [-28, -30],
+  [0, -38],
+  [28, -30],
+];
+const wildlife = [
+  [5, 0],
+  [-17, -2],
+  [17, -5],
 ];
 
 /** Hand-staged landmarks with deterministic, instanced decoration. */
@@ -46,7 +63,11 @@ export function buildWorld(id: string): BuiltWorld {
   group.name = `biome:${id}`;
   const obstacles: BuiltWorld['obstacles'] = [];
   const hazards: BuiltWorld['hazards'] = [];
-  const buckets = new Map<string, { shape: Shape; color: number; items: Stamp[]; glow: boolean }>();
+  const footprints: Array<{ x: number; z: number; radius: number }> = [];
+  const buckets = new Map<
+    string,
+    { shape: Shape; color: number; items: Stamp[]; glow: boolean; shadow: boolean }
+  >();
   function stamp(
     shape: Shape,
     color: number,
@@ -55,8 +76,9 @@ export function buildWorld(id: string): BuiltWorld {
     rotation = 0,
     glow = false,
   ) {
-    const key = `${shape}:${color}:${glow}`;
-    if (!buckets.has(key)) buckets.set(key, { shape, color, items: [], glow });
+    const shadow = pos[1] > 0.35 && size[1] > 0.28;
+    const key = `${shape}:${color}:${glow}:${shadow}`;
+    if (!buckets.has(key)) buckets.set(key, { shape, color, items: [], glow, shadow });
     buckets.get(key)!.items.push({ position: pos, size, rotation });
   }
   const box = (
@@ -68,7 +90,14 @@ export function buildWorld(id: string): BuiltWorld {
     h: number,
     d: number,
     r = 0,
-  ) => stamp('box', c, [x, y, z], [w, h, d], r);
+  ) =>
+    stamp(
+      Math.min(w, h, d) >= 0.18 && Math.max(w, h, d) < 13 ? 'rounded' : 'box',
+      c,
+      [x, y, z],
+      [w, h, d],
+      r,
+    );
   const rock = (c: number, x: number, y: number, z: number, w: number, h: number, d: number) =>
     stamp('rock', c, [x, y, z], [w, h, d]);
   const cone = (c: number, x: number, y: number, z: number, w: number, h: number) =>
@@ -78,11 +107,35 @@ export function buildWorld(id: string): BuiltWorld {
     seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
     return seed / 4294967296;
   };
-  function clear(x: number, z: number, radius = 2) {
-    if (Math.hypot(x, z) > 39 || (Math.abs(x) < 4 && z > -36) || (z > -35 && z < -29)) return false;
-    if (cages.some(([cx, cz]) => Math.hypot(x - cx, z - cz) < radius + 3.2)) return false;
-    if (Math.abs(x) < 15 && z > 4) return false;
+  function segmentDistance(x: number, z: number, ax: number, az: number, bx: number, bz: number) {
+    const dx = bx - ax,
+      dz = bz - az;
+    const t = THREE.MathUtils.clamp(
+      ((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz || 1),
+      0,
+      1,
+    );
+    return Math.hypot(x - ax - t * dx, z - az - t * dz);
+  }
+  function gameplayClear(x: number, z: number, radius: number) {
+    if (cages.some(([cx, cz]) => Math.hypot(x - cx, z - cz) < radius + 4)) return false;
+    if (portals.some(([px, pz]) => Math.hypot(x - px, z - pz) < radius + 3.6)) return false;
+    if (wildlife.some(([nx, nz]) => Math.hypot(x - nx, z - nz) < radius + 3.4)) return false;
+    if (Math.hypot(x, z + 19) < radius + 7.2) return false;
+    if (segmentDistance(x, z, 0, 12, 0, -38) < radius + 2.6) return false;
+    if (segmentDistance(x, z, -28, -30, 28, -30) < radius + 1.5) return false;
+    if (cages.some(([cx, cz]) => segmentDistance(x, z, 0, cz, cx, cz) < radius + 1.35))
+      return false;
     return true;
+  }
+  function clear(x: number, z: number, radius = 2) {
+    if (Math.hypot(x, z) + radius > 40.5 || !gameplayClear(x, z, radius)) return false;
+    if (Math.abs(x) < 14 + radius && z > 4) return false;
+    return !footprints.some((f) => Math.hypot(x - f.x, z - f.z) < radius + f.radius + 0.65);
+  }
+  function occupy(x: number, z: number, radius: number, height?: number, collisionRadius = radius) {
+    footprints.push({ x, z, radius });
+    if (height !== undefined) obstacles.push({ x, z, radius: collisionRadius, height });
   }
   const groundMesh = new THREE.Mesh(
     new THREE.CylinderGeometry(43, 43, 1.5, 64),
@@ -98,21 +151,37 @@ export function buildWorld(id: string): BuiltWorld {
   );
   base.position.y = -2.75;
   group.add(base);
-  box(p.path, 0, 0.018, -11, 4.5, 0.04, 58);
-  box(p.path, 0, 0.02, -32, 66, 0.04, 4.5);
+  // Sand-colored shoulders, inset paving, and scattered pebbles add depth without raised collision.
+  box(p.cliff, 0, 0.007, -13, 5.1, 0.025, 53);
+  box(p.path, 0, 0.025, -13, 4.5, 0.04, 53);
+  box(p.cliff, 0, 0.007, -30, 59, 0.025, 4.4);
+  box(p.path, 0, 0.027, -30, 58, 0.04, 3.6);
   for (const [x, z] of cages.slice(0, 6)) {
     box(p.path, x / 2, 0.025, z, Math.abs(x) + 4, 0.045, 2.1);
     stamp('cylinder', p.path, [x, 0.035, z], [5.5, 0.05, 5.5]);
   }
   // Small colored stepping tiles make the main trail easy to follow.
-  for (let z = 8; z > -29; z -= 5)
-    box(id === 'ocean' ? 0xd7e6c6 : 0xf6e3b9, 0.7, 0.053, z, 0.55, 0.05, 0.75, 0.1);
+  for (let z = 8; z > -36; z -= 3) {
+    box(id === 'ocean' ? 0xd7e6c6 : 0xf6e3b9, 0.6, 0.057, z, 0.65, 0.045, 0.85, 0.1);
+    box(p.cliff, -1.6, 0.052, z + 1, 0.18, 0.025, 0.31, -0.18);
+  }
 
   function tree(x: number, z: number, scale = 1) {
     const snowy = id === 'winter',
       acacia = id === 'savannah',
       palm = id === 'beach';
     box(snowy ? 0x7a8b90 : 0x9b7957, x, scale * 1.3, z, 0.55 * scale, 2.6 * scale, 0.55 * scale);
+    box(snowy ? 0x7a8b90 : 0x8b6b4d, x, 0.17 * scale, z, 0.85 * scale, 0.34 * scale, 0.8 * scale);
+    for (const side of [-1, 1])
+      box(
+        0xa78a60,
+        x + side * 0.18 * scale,
+        1.15 * scale,
+        z + 0.29 * scale,
+        0.09 * scale,
+        0.7 * scale,
+        0.025,
+      );
     if (snowy) {
       for (let k = 0; k < 3; k++) {
         cone(p.leaf, x, scale * (2 + k * 0.7), z, scale * (2.5 - k * 0.55), scale * 1.8);
@@ -155,7 +224,31 @@ export function buildWorld(id: string): BuiltWorld {
         -0.1,
       );
     }
-    obstacles.push({ x, z, radius: 0.65 * scale });
+    if (!snowy && !palm && !acacia) {
+      for (const side of [-1, 1])
+        box(
+          0x82b279,
+          x + side * 0.95 * scale,
+          2.55 * scale,
+          z + 0.3 * scale,
+          0.85 * scale,
+          0.55 * scale,
+          1.3 * scale,
+          side * 0.13,
+        );
+      if (id === 'meadow')
+        for (let k = 0; k < 3; k++)
+          rock(
+            0xe7b06b,
+            x + (k - 1) * 0.52 * scale,
+            2.35 * scale,
+            z + 1.22 * scale,
+            0.13 * scale,
+            0.15 * scale,
+            0.13 * scale,
+          );
+    }
+    occupy(x, z, (acacia ? 2.2 : 1.65) * scale, 4.4 * scale, 0.5 * scale);
   }
   function crystal(x: number, z: number, color: number, scale = 1) {
     for (let k = 0; k < 3; k++) {
@@ -175,6 +268,7 @@ export function buildWorld(id: string): BuiltWorld {
     rock(0x81cdc6, x, 1.2 * scale, z, 0.8 * scale, 0.35 * scale, 0.8 * scale);
     for (let i = 0; i < 3; i++)
       box(0xf4e8c2, x + (i - 1) * 0.3 * scale, 1.5 * scale, z, 0.13, 0.06, 0.13);
+    occupy(x, z, 0.9 * scale, 1.55 * scale, 0.24 * scale);
   }
   function coral(x: number, z: number, color: number) {
     box(color, x, 0.6, z, 0.25, 1.2, 0.25);
@@ -183,91 +277,108 @@ export function buildWorld(id: string): BuiltWorld {
       box(color, x + s * 0.65, 1.15, z, 0.2, 0.75, 0.2);
     }
   }
-  // Background hills and silhouettes are staged behind the adventure, away from camera corridors.
-  for (let i = 0; i < 12; i++) {
-    const a = Math.PI * 0.67 + (i / 11) * Math.PI * 0.66;
-    const x = Math.sin(a) * 39,
-      z = Math.cos(a) * 39;
-    if (Math.abs(x) < 5 || Math.abs(Math.abs(x) - 30) < 4) continue;
-    rock(p.cliff, x, 0.5, z, 4 + random() * 3, 2 + random() * 3, 4);
-  }
   if (id === 'meadow') {
     // A giant storybook tree is the Meadow's identifying landmark.
-    tree(-18, -34, 2.25);
-    box(0xc59462, -18, 1.3, -32.7, 1.1, 1.9, 0.15);
-    box(0xffdb81, -18, 1.8, -32.58, 0.45, 0.45, 0.08);
+    tree(-18, -36, 1.65);
+    box(0xc59462, -18, 1.3, -35.05, 1.1, 1.9, 0.15);
+    box(0xffdb81, -18, 1.8, -34.93, 0.45, 0.45, 0.08);
     for (let i = 0; i < 5; i++) {
       box(0xf1d49c, 15 + i * 1.1, 0.7, -35, 0.18, 1.4, 0.2);
+      occupy(15 + i * 1.1, -35, 0.45, 1.4, 0.45);
     }
     box(0xf1d49c, 17.2, 1, -35, 4.7, 0.16, 0.2);
   } else if (id === 'winter') {
-    stamp('cylinder', 0xa1ccd9, [-17, 0.045, -8], [10, 0.08, 7]);
-    rock(0xf7f7ed, 17, 1.7, -35, 4, 2.2, 3);
-    box(0xb1d5db, 17, 0.8, -32.3, 1.2, 1.6, 0.35);
+    stamp('cylinder', 0xa1ccd9, [-22, 0.045, -10], [10, 0.08, 7]);
+    occupy(-22, -10, 5.5);
+    rock(0xf7f7ed, 16, 1.7, -37, 3, 2.2, 2.6);
+    occupy(16, -37, 3.2, 4, 2.8);
+    box(0xb1d5db, 16, 0.8, -34.65, 1.2, 1.6, 0.35);
     for (const s of [-1, 1]) {
       rock(0xf3f5eb, 20 + s * 1.6, 0.65, -19, 0.9, 0.7, 0.9);
       rock(0xf3f5eb, 20 + s * 1.6, 1.5, -19, 0.62, 0.62, 0.62);
       box(0x5b7890, 20 + s * 1.6, 2.05, -19, 1, 0.15, 0.8);
+      occupy(20 + s * 1.6, -19, 1, 2.2, 0.85);
     }
   } else if (id === 'savannah') {
     stamp('cylinder', 0x83b8af, [-20, 0.04, -7], [10, 0.07, 7]);
-    tree(17, -35, 1.8);
-    for (let i = 0; i < 4; i++)
+    occupy(-20, -7, 5.4);
+    tree(14, -37, 1.3);
+    for (let i = 0; i < 4; i++) {
       rock(0xc3a477, -15 + i * 2, 0.8 + i * 0.3, -36, 2, 1.3 + i * 0.3, 2.6);
+      occupy(-15 + i * 2, -36, 2, 3.5, 1.7);
+    }
   } else if (id === 'desert') {
     for (let k = 0; k < 5; k++)
-      box(k % 2 ? 0xdab37b : 0xcba374, -18, k * 1.05 + 0.5, -34, 10 - k * 1.8, 1.1, 8 - k * 1.4);
+      box(k % 2 ? 0xdab37b : 0xcba374, -17, k * 0.9 + 0.45, -37, 8 - k * 1.4, 0.95, 5 - k * 0.85);
+    occupy(-17, -37, 4.7, 4.8, 4.2);
     stamp('cylinder', 0x77bdad, [20, 0.04, -2], [8, 0.07, 6]);
-    tree(23, -4, 1.2);
-    for (const s of [-1, 1]) box(0xc69b6c, 17 + s * 2, 2.5, -35, 1.2, 5, 1.2);
+    tree(26, 1, 1.1);
+    occupy(20, -2, 4.4);
+    for (const s of [-1, 1]) {
+      box(0xc69b6c, 17 + s * 2, 2.5, -35, 1.2, 5, 1.2);
+      occupy(17 + s * 2, -35, 0.95, 5.4, 0.85);
+    }
     box(0xe7c58f, 17, 5, -35, 5.5, 0.8, 1.5);
   } else if (id === 'beach') {
     box(0x7fc5c6, -29, 0.04, -6, 16, 0.06, 43);
     box(0xb9e1d7, -20.5, 0.065, -6, 1.5, 0.04, 43);
     box(0xb9946f, -26, 0.4, -17, 14, 0.3, 3);
     for (let k = 0; k < 5; k++) box(0xa28061, -31 + k * 2.5, 0.1, -17, 0.4, 1.5, 0.4);
-    tree(16, -35, 1.6);
-    tree(20, -33, 1.3);
+    tree(13, -36, 1.35);
+    tree(24, -21, 1.2);
     // Stacked sandcastle towers.
     for (const s of [-1, 1]) {
-      box(0xd8b77e, 15 + s * 2, 1.3, -14, 1.7, 2.6, 1.7);
-      cone(0xecc994, 15 + s * 2, 3, -14, 2, 1.2);
+      box(0xd8b77e, 23 + s * 2, 1.3, 4, 1.7, 2.6, 1.7);
+      cone(0xecc994, 23 + s * 2, 3, 4, 2, 1.2);
     }
-    box(0xe7c78f, 15, 0.8, -14, 3, 1.6, 1.2);
+    box(0xe7c78f, 23, 0.8, 4, 3, 1.6, 1.2);
+    occupy(23, 4, 3.8, 3.6, 3.2);
   } else if (id === 'ocean') {
     // Atlantis columns, broken archways and mosaic plaza.
     box(0xbad9cb, -17, 0.14, -35, 11, 0.28, 7);
     for (const x of [-21, -17, -13]) {
       stamp('cylinder', 0xd2e1c5, [x, 2.5, -36], [1.1, 5, 1.1]);
       box(0xe5e6c7, x, 5.05, -36, 1.7, 0.45, 1.7);
+      occupy(x, -36, 1.1, 7.3, 0.85);
     }
     box(0xc5dcca, -17, 5.5, -36, 10, 0.6, 1.7);
     cone(0x7da9a6, -17, 6.5, -36, 7, 1.8);
-    box(0x9f826b, 19, 0.8, -35, 8, 1.6, 3, -0.18);
-    box(0xcbb18a, 19, 3.7, -35, 0.25, 6, 0.25);
-    box(0xe5d5b5, 20.3, 4.6, -35, 2.5, 2.5, 0.12, -0.08);
+    box(0x9f826b, 19, 0.8, -36, 8, 1.6, 3, -0.18);
+    box(0xcbb18a, 19, 3.7, -36, 0.25, 6, 0.25);
+    box(0xe5d5b5, 20.3, 4.6, -36, 2.5, 2.5, 0.12, -0.08);
+    for (const x of [16, 19, 22]) occupy(x, -36, 1.8, x === 19 ? 6.7 : 1.6, 1.65);
     for (let i = 0; i < 9; i++) {
       const x = 11 + i * 1.7;
-      coral(x, -38 + random() * 2, [0xdca1a0, 0xd5b783, 0xaaa5d1][i % 3]);
+      const z = -38 + random() * 2;
+      if (clear(x, z, 0.9)) {
+        coral(x, z, [0xdca1a0, 0xd5b783, 0xaaa5d1][i % 3]);
+        occupy(x, z, 0.9, 1.6, 0.65);
+      }
     }
   } else if (id === 'volcano') {
-    cone(0x59576c, -18, 3.6, -34, 14, 9);
-    cone(0x9a6a6d, -18, 7.6, -34, 6, 2);
-    stamp('cylinder', 0xffb770, [-18, 8.6, -34], [3.7, 0.08, 3.7], 0, true);
+    cone(0x59576c, -17, 3.6, -36, 10, 9);
+    occupy(-17, -36, 5.2, 8.7, 4.5);
+    cone(0x9a6a6d, -17, 7.6, -36, 6, 2);
+    stamp('cylinder', 0xffb770, [-17, 8.6, -36], [3.7, 0.08, 3.7], 0, true);
     for (let i = 0; i < 7; i++) {
       box(0xef9a65, -20 - i * 1.1, 0.06, -27 + i * 4, 4, 0.1, 5.5, -0.2);
       if (i !== 4 && i !== 5) hazards.push({ x: -20 - i * 1.1, z: -27 + i * 4, radius: 1.7 });
     }
-    for (let i = 0; i < 6; i++) box(0xc3a08e, -22 + i * 1.2, 0.3, -8, 1, 0.4, 3.2);
-    for (const s of [-1, 1]) cone(0x655b70, 18 + s * 3, 2, -35, 4, 5);
+    for (let i = 0; i < 8; i++) box(0xc3a08e, -29 + i, 0.08, -9, 0.9, 0.16, 3.2);
+    for (const s of [-1, 1]) {
+      cone(0x655b70, 18 + s * 3, 2, -36, 3.2, 5);
+      occupy(18 + s * 3, -36, 1.8, 4.5, 1.5);
+    }
   } else if (id === 'underground') {
     for (const x of [-23, -12, 13, 24]) {
       rock(0x656d88, x, 3.6, -36, 3, 5, 3);
       cone(0xa09bb4, x, 1.1, -34, 2, 3);
+      occupy(x, -36, 3, 8.6, 2.5);
     }
     box(0x656d88, -17.5, 7.2, -36, 14, 2.5, 5);
     box(0x4b5874, -17.5, 3.4, -38, 7, 5.5, 0.3);
-    for (let i = 0; i < 6; i++) crystal(12 + i * 1.9, -36, i % 2 ? 0xa8cbd2 : 0xb6a0d8, 1.8);
+    crystal(18, -35, 0xa8cbd2, 1.8);
+    occupy(18, -35, 1.4, 2.8, 1.05);
     mushroom(-13, -16, 1.7);
     mushroom(-16, -13, 1.1);
   } else if (id === 'rifts') {
@@ -276,11 +387,18 @@ export function buildWorld(id: string): BuiltWorld {
       crystal(s * 16, -35, 0xe0b4e6, 1.8);
       rock(0xaa90b3, s * 22, 6, -37, 3.5, 1.2, 3);
       cone(0x6c6383, s * 22, 4.8, -37, 3, 2);
+      occupy(s * 16, -35, 1.4, 6.2, 1.15);
+      occupy(s * 22, -37, 3.7);
     }
     stamp('cylinder', 0xb7a5d0, [16, 0.08, -15], [9, 0.1, 9], 0, true);
     for (let i = 0; i < 8; i++) {
       const a = (i / 8) * Math.PI * 2;
-      crystal(16 + Math.sin(a) * 5, -15 + Math.cos(a) * 5, 0xa6dfd3, 0.8);
+      const x = 16 + Math.sin(a) * 5,
+        z = -15 + Math.cos(a) * 5;
+      if (gameplayClear(x, z, 0.9)) {
+        crystal(x, z, 0xa6dfd3, 0.8);
+        occupy(x, z, 0.9, 1.4, 0.6);
+      }
     }
   } else if (id === 'city') {
     box(0x7e9094, -25, 0.045, -3, 5.5, 0.07, 55);
@@ -294,36 +412,61 @@ export function buildWorld(id: string): BuiltWorld {
         const c = [0x9fbac3, 0xd7b5a1, 0xc9c497, 0xa6adc7][i % 4];
         box(c, x, h / 2, z, 5.2, h, 5.5);
         box(0xe8dfc4, x, h + 0.15, z, 5.6, 0.3, 5.9);
+        box(0x83959c, x, h + 0.55, z, 2.8, 0.8, 2.6);
+        box(0xe8dfc4, x, 0.16, z, 5.7, 0.3, 6);
+        box(0x526d77, x, 0.9, z + 2.79, 1.15, 1.8, 0.08);
+        box(0xf1ce87, x, 2, z + 2.95, 1.6, 0.16, 0.55);
         for (let row = 0; row < Math.floor(h / 1.5); row++)
           for (const col of [-1, 0, 1])
             box(0xe3e5c4, x + col * 1.3, 1 + row * 1.5, z + 2.8, 0.7, 0.85, 0.06);
-        obstacles.push({ x, z, radius: 3.5 });
+        occupy(x, z, 3.9, h + 0.3, 3.6);
       }
     box(0xcac2a5, 0, 0.13, -20, 12, 0.2, 10);
     for (let i = 0; i < 6; i++)
       box(0xe8dfbb, -2 + (i % 2) * 4, 0.09, 5 - Math.floor(i / 2) * 8, 0.3, 0.1, 2);
   }
-  // Populate edges densely, while all cage platforms and travel lanes remain clear.
-  for (let i = 0; i < 44; i++) {
+  // Footprints prevent a tree canopy or rock cluster from being placed inside a landmark.
+  // All high scenery clears full cage/portal/NPC footprints and the complete walking routes.
+  for (let i = 0; i < 95; i++) {
     const x = (random() - 0.5) * 76,
       z = (random() - 0.5) * 74;
-    if (!clear(x, z, 2.5)) continue;
     const scale = 0.8 + random() * 0.6;
+    if (!clear(x, z, 2.2 * scale)) continue;
     if (['meadow', 'winter', 'savannah', 'beach'].includes(id) && i % 3 !== 0) tree(x, z, scale);
     else if (id === 'desert') {
       box(0x78a286, x, 1.1, z, 0.55, 2.2, 0.55);
       box(0x78a286, x + 0.45, 1.4, z, 0.8, 0.3, 0.3);
       box(0x78a286, x + 0.8, 1.7, z, 0.3, 0.8, 0.3);
-    } else if (id === 'ocean') coral(x, z, [0xd898a9, 0xd9bf85, 0x9aa3d2][i % 3]);
-    else if (id === 'underground' && i % 2) mushroom(x, z, scale);
-    else if (id === 'rifts' || id === 'underground')
+      box(0xe7bb9a, x, 2.24, z, 0.23, 0.12, 0.23);
+      occupy(x + 0.3, z, 1.1, 2.3, 0.7);
+    } else if (id === 'ocean') {
+      coral(x, z, [0xd898a9, 0xd9bf85, 0x9aa3d2][i % 3]);
+      occupy(x, z, 1, 1.6, 0.65);
+    } else if (id === 'underground' && i % 2) mushroom(x, z, scale);
+    else if (id === 'rifts' || id === 'underground') {
       crystal(x, z, i % 2 ? 0x9dd8cd : 0xc5a1d5, scale);
-    else {
+      occupy(x, z, scale, 1.5 * scale, 0.7 * scale);
+    } else {
       rock(p.cliff, x, 0.4, z, scale, scale * 0.65, scale * 0.8);
+      occupy(x, z, scale, 0.4 + scale * 0.65, scale * 0.8);
     }
   }
+  // Low planting islands supply texture and color variation without extra movement barriers.
+  const patch = new THREE.Color(p.ground).lerp(new THREE.Color(p.leaf), 0.22).getHex();
+  for (let i = 0; i < 100; i++) {
+    const x = (random() - 0.5) * 75,
+      z = (random() - 0.5) * 75;
+    if (!clear(x, z, 1.1)) continue;
+    stamp(
+      'cylinder',
+      patch,
+      [x, 0.012, z],
+      [1.6 + random() * 2.8, 0.025, 1 + random() * 1.5],
+      random() * Math.PI,
+    );
+  }
   // Groundcover: flowers, grasses, shells, seabed gems, or glowing embers.
-  for (let i = 0; i < 230; i++) {
+  for (let i = 0; i < 440; i++) {
     const x = (random() - 0.5) * 77,
       z = (random() - 0.5) * 76;
     if (!clear(x, z, 0.3)) continue;
@@ -334,6 +477,7 @@ export function buildWorld(id: string): BuiltWorld {
         const c = [0xffd77b, 0xf1aaa1, 0xe8eee0][variant];
         box(c, x, 0.4, z, 0.27, 0.09, 0.27);
         box(0xe6b66e, x, 0.46, z, 0.09, 0.04, 0.09);
+        box(p.leaf, x + 0.12, 0.2, z, 0.23, 0.055, 0.1, 0.35);
       }
     } else if (id === 'ocean') {
       box(0x6ca79a, x, 0.32, z, 0.13, 0.65, 0.13);
@@ -357,6 +501,7 @@ export function buildWorld(id: string): BuiltWorld {
     scale = new THREE.Vector3();
   const geometry: Record<Shape, THREE.BufferGeometry> = {
     box: new THREE.BoxGeometry(1, 1, 1),
+    rounded: new RoundedBoxGeometry(1, 1, 1, 1, 0.065),
     rock: new THREE.IcosahedronGeometry(1, 0),
     cone: new THREE.ConeGeometry(0.5, 1, 5),
     cylinder: new THREE.CylinderGeometry(0.5, 0.5, 1, 24),
@@ -364,7 +509,7 @@ export function buildWorld(id: string): BuiltWorld {
   for (const bucket of buckets.values()) {
     const mat = new THREE.MeshStandardMaterial({
       color: bucket.color,
-      roughness: 0.95,
+      roughness: 0.82,
       emissive: bucket.glow ? bucket.color : 0,
       emissiveIntensity: bucket.glow ? 0.23 : 0,
     });
@@ -376,7 +521,7 @@ export function buildWorld(id: string): BuiltWorld {
       matrix.compose(position, rotation, scale);
       mesh.setMatrixAt(i, matrix);
     });
-    mesh.castShadow = bucket.shape !== 'cylinder';
+    mesh.castShadow = bucket.shadow;
     mesh.receiveShadow = true;
     mesh.computeBoundingSphere();
     group.add(mesh);
