@@ -10,7 +10,7 @@ Explore a readable region, follow landmarks or animal hints, jump onto an easy-t
 
 ## Player and controls
 
-The player starts as a human in Meadow. Landscape iPad touch controls are primary: a creature selector on the left, movement on the right, and a prominent star action button. Keyboard and mouse remain available. The camera follows automatically. Teach movement, jumping, rescue, transformation, and an ability through short in-world prompts.
+The player starts as a human in Meadow. Landscape iPad touch controls are primary: a creature selector on the left, movement on the right, and a prominent star action button. Keyboard and mouse remain available. The camera follows automatically. Following the October 18 polish feedback, start immediately without automatic training or recurring instruction panels. Cage roofs and the star action communicate the rescue interaction; Pause → How to play holds optional movement, rescue, transformation, and ability instructions. NPC speech follows deliberate star interactions rather than proximity.
 
 ## Transformations and rescue
 

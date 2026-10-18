@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { createCreature, createBoss, animateCreature, batchCreatureMeshes } from './creatures';
 import { buildWorld, type BuiltWorld } from './world';
@@ -90,13 +91,15 @@ export class Game {
   private elapsed = 0;
   private saveTime = 0;
   private portalCooldown = 0;
-  private dialogueTime = 0;
-  private hudTime = 0;
   private timeline: SceneTimeline | null = null;
   private introduced = new Set<string>();
   private celebration: THREE.Group | null = null;
   private celebrationTime = 0;
   private lastSafe = { x: 0, z: 7 };
+  private focusLabels: Array<{ tag: THREE.Sprite; anchor: THREE.Group; range: number }> = [];
+  private maxPixelRatio = 2;
+  private softwareTest = false;
+  private sun = new THREE.DirectionalLight(0xfff3da, 2.6);
   private qualityTime = 0;
   private qualityFrames = 0;
   private foxAsset: THREE.Group | null = null;
@@ -150,23 +153,47 @@ export class Game {
     });
     const query = new URLSearchParams(location.search);
     // Headless CI has a software GPU. Keep CSS/input geometry unchanged while rendering fewer pixels.
-    const softwareTest = query.has('test') && query.has('software');
-    this.renderer.setPixelRatio(softwareTest ? 0.5 : Math.min(window.devicePixelRatio, 1.5));
+    this.softwareTest = query.has('test') && query.has('software');
+    this.maxPixelRatio = Math.min(window.devicePixelRatio, 2);
+    this.renderer.setPixelRatio(this.softwareTest ? 0.5 : this.maxPixelRatio);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.2;
-    this.scene.add(new THREE.HemisphereLight(0xfff5dc, 0x6f8e7a, 2.3));
-    const sun = new THREE.DirectionalLight(0xfff3d0, 3.1);
-    sun.position.set(-15, 35, 15);
-    this.scene.add(sun);
+    this.renderer.toneMappingExposure = 1.03;
+    this.renderer.shadowMap.enabled = !this.softwareTest;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.scene.add(new THREE.HemisphereLight(0xe4f3ff, 0x59744d, 1.65));
+    this.sun.position.set(-18, 32, 18);
+    this.sun.castShadow = true;
+    this.sun.shadow.mapSize.set(2048, 2048);
+    Object.assign(this.sun.shadow.camera, {
+      left: -27,
+      right: 27,
+      top: 27,
+      bottom: -27,
+      near: 1,
+      far: 85,
+    });
+    this.sun.shadow.normalBias = 0.055;
+    this.sun.shadow.bias = -0.00015;
+    this.sun.shadow.camera.updateProjectionMatrix();
+    this.scene.add(this.sun, this.sun.target);
     this.effects = new Effects(this.scene);
     this.scene.add(this.avatar);
+    const contact = document.createElement('canvas');
+    contact.width = contact.height = 64;
+    const ctx = contact.getContext('2d')!;
+    const gradient = ctx.createRadialGradient(32, 32, 3, 32, 32, 31);
+    gradient.addColorStop(0, '#173d2f99');
+    gradient.addColorStop(1, '#173d2f00');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 64, 64);
+    const contactMap = new THREE.CanvasTexture(contact);
     this.shadow = new THREE.Mesh(
-      new THREE.CircleGeometry(0.65, 20),
+      new THREE.PlaneGeometry(1.7, 1.7),
       new THREE.MeshBasicMaterial({
-        color: 0x244e3b,
+        map: contactMap,
         transparent: true,
-        opacity: 0.16,
+        opacity: 0.38,
         depthWrite: false,
       }),
     );
@@ -240,13 +267,6 @@ export class Game {
     this.state = 'playing';
     this.snapCamera();
     if (this.saves.warning) this.ui.toast(this.saves.warning);
-    else if (!this.saves.data.rescued.length) {
-      this.ui.dialogue(
-        'Pip, picnic inspector',
-        'Welcome, Calvin! Jump onto that fox’s cage. You’ll become the friend you rescue.',
-      );
-      this.dialogueTime = 7;
-    } else this.ui.toast('Welcome back! Your wild friends missed you.');
     void this.foxPromise;
   }
   move(key: string, down: boolean) {
@@ -339,9 +359,12 @@ export class Game {
             npc.name,
             this.biome === 'ocean'
               ? 'Ba da bop! That’s my original jazz number.'
-              : 'Boing! Ten out of ten for silliness.',
+              : npc.line++ % 2 === 0
+                ? 'Boing! Ten out of ten for silliness.'
+                : getBiome(this.biome).dialogue[
+                    (npc.line - 1) % getBiome(this.biome).dialogue.length
+                  ],
           );
-          this.dialogueTime = 3;
         }
       if (this.form === 'mecha-reptile') {
         const beam = new THREE.Mesh(
@@ -371,7 +394,7 @@ export class Game {
     );
     this.audio.play('transform');
     this.ui.renderForms(id);
-    this.ui.toast(`${getCreature(id).name}! ${getCreature(id).power} with the star.`);
+    this.ui.toast(`${getCreature(id).name} · ${getCreature(id).power}`);
   }
   private replaceAvatar() {
     const old = this.avatar;
@@ -388,6 +411,12 @@ export class Game {
     this.avatar.userData.sharedAsset = this.form === 'fox' && !!this.foxAsset;
     this.avatar.rotation.y = rotation;
     if (getCreature(this.form).kind === 'giant') this.avatar.scale.setScalar(2);
+    this.avatar.traverse((part) => {
+      if (part instanceof THREE.Mesh) {
+        part.castShadow = true;
+        part.receiveShadow = true;
+      }
+    });
     this.scene.add(this.avatar);
     if (this.avatar.userData.sharedAsset) {
       this.mixer = new THREE.AnimationMixer(this.avatar);
@@ -420,6 +449,7 @@ export class Game {
     this.region.add(this.world.group);
     this.scene.background = new THREE.Color(this.world.sky);
     this.scene.fog = new THREE.Fog(this.world.sky, 45, 105);
+    this.focusLabels = [];
     this.cages = [];
     this.npcs = [];
     this.portals = [];
@@ -451,7 +481,6 @@ export class Game {
     this.ui.biome(this.biome);
     this.ui.renderForms(this.form);
     this.portalCooldown = 1;
-    this.updateGuide();
   }
   private addCage(id: string, x: number, z: number) {
     const group = new THREE.Group();
@@ -464,10 +493,10 @@ export class Game {
       roughness: 0.65,
     });
     const wood = new THREE.MeshStandardMaterial({ color: 0xe0bc7d, roughness: 1 });
-    const base = new THREE.Mesh(new THREE.BoxGeometry(3.7, 0.18, 3.7), wood);
+    const base = new THREE.Mesh(new RoundedBoxGeometry(3.7, 0.18, 3.7, 2, 0.07), wood);
     base.position.y = 0.09;
     bars.add(base);
-    const roof = new THREE.Mesh(new THREE.BoxGeometry(3.8, 0.18, 3.8), wood);
+    const roof = new THREE.Mesh(new RoundedBoxGeometry(3.8, 0.22, 3.8, 2, 0.08), wood);
     roof.position.y = 1.4;
     bars.add(roof);
     const rods = new THREE.InstancedMesh(new THREE.BoxGeometry(0.07, 1.2, 0.07), steel, 20);
@@ -482,7 +511,7 @@ export class Game {
       }
     bars.add(rods);
     const lock = new THREE.Mesh(
-      new THREE.BoxGeometry(0.45, 0.5, 0.16),
+      new RoundedBoxGeometry(0.45, 0.5, 0.16, 2, 0.05),
       new THREE.MeshStandardMaterial({ color: 0xf6d168 }),
     );
     lock.position.set(0, 0.8, 1.82);
@@ -498,9 +527,10 @@ export class Game {
     animal.scale.setScalar(0.55);
     animal.position.y = 0.18;
     group.add(animal);
-    const tag = label(`${getCreature(id).name} · jump here`, '#fff5dc', 5.7);
+    const tag = label(`${getCreature(id).name} · jump`, '#fff5dc', 5.2);
     tag.position.y = 3;
     group.add(tag);
+    this.focusLabels.push({ tag, anchor: group, range: 13 });
     const beacon = new THREE.Mesh(
       new THREE.CylinderGeometry(0.08, 0.08, 6, 8),
       new THREE.MeshBasicMaterial({
@@ -512,20 +542,27 @@ export class Game {
     );
     beacon.position.y = 4.4;
     bars.add(beacon);
+    group.traverse((part) => {
+      if (part instanceof THREE.Mesh && part !== beacon && part !== pad) {
+        part.castShadow = true;
+        part.receiveShadow = true;
+      }
+    });
     this.region.add(group);
     this.cages.push({ id, x, z, group, bars, animal, rescued: false, age: 0 });
   }
   private rescueCage(cage: Cage) {
     if (!rescue(this.saves.data, cage.id)) return;
     cage.rescued = true;
+    cage.group.userData.complete = true;
     cage.age = 0;
     this.effects.burst(new THREE.Vector3(cage.x, 2, cage.z), 0xffd268, 100);
     this.audio.play('rescue');
     this.ui.renderForms(this.form);
-    this.ui.toast(`${getCreature(cage.id).name} rescued! Tap your new friend on the left.`);
+    this.ui.toast(`${getCreature(cage.id).name} rescued!`);
     this.saves.save();
     if (canEnterFinal(this.saves.data.rescued)) {
-      this.ui.toast('Every friend is free! The Demon Lizard arena in Big Little City is open!');
+      this.ui.toast('Every friend is free! The City arena is open!');
       // The last cage may be in this region: open the arena immediately, without a reload.
       if (this.gate) {
         this.region.remove(this.gate);
@@ -534,7 +571,6 @@ export class Game {
         this.addBoss();
       }
     }
-    this.updateGuide();
   }
   private addPortals() {
     const index = BIOMES.findIndex((b) => b.id === this.biome);
@@ -571,6 +607,7 @@ export class Game {
       const tag = label(getBiome(destination).name, '#fff5dc', 6);
       tag.position.y = 5.3;
       group.add(tag);
+      this.focusLabels.push({ tag, anchor: group, range: 12 });
       this.region.add(group);
       this.portals.push({ group, x, z, destination });
     }
@@ -583,6 +620,9 @@ export class Game {
       const x = i === 0 ? 5 : i === 1 ? -17 : 17;
       const z = i === 0 ? 0 : i === 1 ? -2 : -5;
       animal.position.set(x, 0, z);
+      animal.traverse((part) => {
+        if (part instanceof THREE.Mesh) part.castShadow = true;
+      });
       this.region.add(animal);
       this.npcs.push({
         model: animal,
@@ -607,9 +647,6 @@ export class Game {
       tail.position.set(0, 0.35, 0.7);
       npc.model.add(tail);
       this.region.add(npc.model);
-      const tag = label('Jazzy Finn · original jazz', '#ffe5a0', 5.4);
-      tag.position.set(5, 3.2, 0);
-      this.region.add(tag);
     }
   }
   private addBoss() {
@@ -630,6 +667,7 @@ export class Game {
       );
       text.position.y = 4;
       this.gate.add(text);
+      this.focusLabels.push({ tag: text, anchor: this.gate, range: 13 });
       this.gate.position.set(0, 0, -18);
       this.region.add(this.gate);
       return;
@@ -642,9 +680,12 @@ export class Game {
     model.position.set(0, 0, -19);
     model.rotation.y = 0;
     this.region.add(model);
-    const tag = label(`${data.name} · head boops!`, '#ffe5a0', 6.2);
-    tag.position.y = data.id === 'demon-lizard' ? 4.8 : 4.6;
-    model.add(tag);
+    model.traverse((part) => {
+      if (part instanceof THREE.Mesh) {
+        part.castShadow = true;
+        part.receiveShadow = true;
+      }
+    });
     this.encounter = { data, model, hits: 0, cooldown: 0, active: false, defeating: 0 };
     const pad = new THREE.Mesh(
       new THREE.RingGeometry(3.6, 4, 32),
@@ -702,7 +743,7 @@ export class Game {
     );
     this.audio.play('hit');
     this.ui.boss(enc.data.name, enc.hits, enc.data.hits, bossHearts(enc.hits, enc.data.hits));
-    this.ui.toast(`BOING! ${enc.hits} / ${enc.data.hits} head boops!`);
+
     if (enc.hits >= enc.data.hits) {
       this.saves.data.defeated.push(enc.data.id);
       this.saves.save();
@@ -722,7 +763,6 @@ export class Game {
     disposeObject(this.encounter.model);
     this.encounter = null;
     this.ui.hideBoss();
-    this.updateGuide();
   }
   private victory(replay: boolean) {
     if (this.state === 'menu' || this.timeline || this.celebration) return;
@@ -759,36 +799,6 @@ export class Game {
       },
     );
   }
-  private updateGuide() {
-    const remaining = this.cages.filter((c) => !c.rescued);
-    if (remaining.length) {
-      const nearest = remaining.reduce((a, b) =>
-        Math.hypot(a.x - this.player.x, a.z - this.player.z) <
-        Math.hypot(b.x - this.player.x, b.z - this.player.z)
-          ? a
-          : b,
-      );
-      const dx = nearest.x - this.player.x,
-        dz = nearest.z - this.player.z;
-      const dir =
-        Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 'right' : 'left') : dz < 0 ? 'ahead' : 'behind';
-      const dist = Math.round(Math.hypot(dx, dz));
-      this.ui.guide(
-        `${getCreature(nearest.id).name} ${dir} · ${dist < 4 ? 'jump onto the roof!' : `${dist} steps to a new friend`}`,
-      );
-    } else if (this.biome === 'city' && !this.saves.data.defeated.includes('demon-lizard'))
-      this.ui.guide(
-        canEnterFinal(this.saves.data.rescued)
-          ? 'The Demon Lizard is ready. Five head boops. You’ve got this!'
-          : `${CREATURES.length - this.saves.data.rescued.length} more friends need rescuing. Follow the rings!`,
-      );
-    else
-      this.ui.guide(
-        this.encounter
-          ? 'Try head boops on the silly boss, or explore the glowing rings.'
-          : 'All local friends are free! Glowing rings lead to your next adventure.',
-      );
-  }
   private persist() {
     if (this.state === 'menu') return;
     this.saves.data.location = { biome: this.biome, x: this.lastSafe.x, z: this.lastSafe.z };
@@ -801,8 +811,7 @@ export class Game {
     location.reload();
   }
   private snapCamera() {
-    this.camera.position.set(this.player.x + 3, 12 + this.player.y * 0.35, this.player.z + 17);
-    this.camera.lookAt(this.player.x, 1 + this.player.y * 0.5, this.player.z - 3);
+    this.updateCamera(1);
   }
   private updatePlayer(dt: number) {
     const c = getCreature(this.form);
@@ -830,9 +839,9 @@ export class Game {
     for (const obstacle of this.world.obstacles) {
       const distance = Math.hypot(this.player.x - obstacle.x, this.player.z - obstacle.z);
       const min = obstacle.radius + 0.4;
-      if (distance < min) {
-        this.player.x = obstacle.x + ((this.player.x - obstacle.x) / (distance || 1)) * min;
-        this.player.z = obstacle.z + ((this.player.z - obstacle.z) / (distance || 1)) * min;
+      if (distance < min && this.player.y < (obstacle.height ?? 4)) {
+        this.player.x = obstacle.x + (distance ? (this.player.x - obstacle.x) / distance : 1) * min;
+        this.player.z = obstacle.z + (distance ? (this.player.z - obstacle.z) / distance : 0) * min;
       }
     }
     if (this.gate && Math.hypot(this.player.x, this.player.z + 19) < 6.5) {
@@ -840,9 +849,21 @@ export class Game {
       const angle = Math.atan2(this.player.x, this.player.z + 19);
       this.player.x = Math.sin(angle) * 6.5;
       this.player.z = -19 + Math.cos(angle) * 6.5;
-      this.ui.guide(
-        `${CREATURES.length - this.saves.data.rescued.length} more friends will open the final arena!`,
-      );
+    }
+    // Broad, low cage walls keep the avatar out of the animal enclosure. The generous
+    // landing envelope extends beyond them, so an ordinary jump beside a cage still rescues.
+    if (this.player.y < 1.5) {
+      for (const cage of this.cages) {
+        if (cage.rescued) continue;
+        const cageX = this.player.x - cage.x;
+        const cageZ = this.player.z - cage.z;
+        const wall = 2.25;
+        if (Math.abs(cageX) < wall && Math.abs(cageZ) < wall) {
+          if (Math.abs(cageX) > Math.abs(cageZ))
+            this.player.x = cage.x + (cageX < 0 ? -wall : wall);
+          else this.player.z = cage.z + (cageZ < 0 ? -wall : wall);
+        }
+      }
     }
     const previousY = this.player.y;
     const water = this.biome === 'ocean' || (this.biome === 'beach' && this.player.x < -20);
@@ -869,6 +890,9 @@ export class Game {
         this.player.z - enc.model.position.z,
       );
       if (distance < 9 && !enc.active) this.beginBoss(enc);
+      if (distance >= 12) this.ui.hideBoss();
+      else if (enc.active)
+        this.ui.boss(enc.data.name, enc.hits, enc.data.hits, bossHearts(enc.hits, enc.data.hits));
       if (enc.active) {
         const target = {
           x: enc.model.position.x,
@@ -937,8 +961,6 @@ export class Game {
     );
   }
   private updateNPCs(dt: number) {
-    this.dialogueTime -= dt;
-    if (this.dialogueTime <= 0) this.ui.hideDialogue();
     for (const [i, npc] of this.npcs.entries()) {
       npc.wobble = Math.max(0, npc.wobble - dt);
       const wander = this.elapsed * 0.25 + i * 2;
@@ -948,15 +970,6 @@ export class Game {
       npc.model.rotation.z = npc.wobble > 0 ? Math.sin(npc.wobble * 25) * 0.2 : 0;
       npc.model.rotation.y = Math.sin(wander) * 0.8;
       animateCreature(npc.model, this.elapsed + i, true);
-      if (
-        this.dialogueTime <= -5 &&
-        Math.hypot(this.player.x - npc.model.position.x, this.player.z - npc.model.position.z) < 4
-      ) {
-        const biome = getBiome(this.biome);
-        this.ui.dialogue(npc.name, biome.dialogue[npc.line++ % biome.dialogue.length]);
-        this.dialogueTime = 5;
-        this.audio.play('talk');
-      }
     }
   }
   private animateWorld(dt: number) {
@@ -1031,15 +1044,66 @@ export class Game {
       if (this.encounter && this.timeline.kind !== 'victory')
         target.set(this.encounter.model.position.x, 2, this.encounter.model.position.z);
     }
-    // Lift the camera above any nearby scenery in its follow corridor.
-    for (const o of this.world.obstacles)
-      if (Math.hypot(desired.x - o.x, desired.z - o.z) < o.radius + 2)
-        desired.y = Math.max(desired.y, 14 + o.radius);
+    // Check the whole sight line, including trees between the avatar and camera.
+    const sightX = desired.x - target.x;
+    const sightZ = desired.z - target.z;
+    const sightLengthSq = sightX * sightX + sightZ * sightZ;
+    for (const obstacle of this.world.obstacles) {
+      const t = THREE.MathUtils.clamp(
+        ((obstacle.x - target.x) * sightX + (obstacle.z - target.z) * sightZ) / sightLengthSq,
+        0.12,
+        1,
+      );
+      if (
+        Math.hypot(target.x + sightX * t - obstacle.x, target.z + sightZ * t - obstacle.z) <
+        obstacle.radius + 1
+      ) {
+        const clearance = ((obstacle.height ?? 5) + 1.5 - target.y) / t + target.y;
+        desired.y = Math.min(25 + this.player.y * 0.55, Math.max(desired.y, clearance));
+      }
+    }
     this.camera.position.lerp(desired, Math.min(1, dt * 5));
     this.camera.lookAt(target);
   }
+  private updateFocusLabels() {
+    let nearest: (typeof this.focusLabels)[number] | undefined;
+    let distance = Infinity;
+    const projected = new THREE.Vector3();
+    for (const candidate of this.focusLabels) {
+      candidate.tag.visible = false;
+      if (
+        this.state !== 'playing' ||
+        candidate.anchor.userData.complete ||
+        !candidate.anchor.parent ||
+        (this.encounter?.active &&
+          Math.hypot(
+            this.player.x - this.encounter.model.position.x,
+            this.player.z - this.encounter.model.position.z,
+          ) < 12)
+      )
+        continue;
+      const d = Math.hypot(
+        candidate.anchor.position.x - this.player.x,
+        candidate.anchor.position.z - this.player.z,
+      );
+      candidate.tag.getWorldPosition(projected).project(this.camera);
+      if (
+        d < candidate.range &&
+        d < distance &&
+        Math.abs(projected.x) < 0.72 &&
+        projected.y < 0.65 &&
+        projected.y > -0.55 &&
+        projected.z < 1
+      ) {
+        nearest = candidate;
+        distance = d;
+      }
+    }
+    if (nearest) nearest.tag.visible = true;
+  }
   private frame(ms: number) {
-    const dt = Math.min(0.05, (ms - (this.lastTime || ms)) / 1000);
+    const wallDt = Math.min(0.25, (ms - (this.lastTime || ms)) / 1000);
+    const dt = Math.min(0.05, wallDt);
     this.lastTime = ms;
     this.elapsed += dt;
     this.jumpCooldown = Math.max(0, this.jumpCooldown - dt);
@@ -1050,15 +1114,10 @@ export class Game {
       this.updateNPCs(dt);
       this.audio.tick(this.elapsed, this.biome);
       this.saveTime += dt;
-      this.hudTime += dt;
       if (this.saveTime > 8) {
         this.saveTime = 0;
         this.persist();
         if (this.saves.warning) this.ui.toast(this.saves.warning);
-      }
-      if (this.hudTime > 0.5) {
-        this.hudTime = 0;
-        this.updateGuide();
       }
     }
     if (this.timeline && this.state === 'cutscene') {
@@ -1071,12 +1130,21 @@ export class Game {
       this.effects.tick(dt);
       this.updateCamera(dt);
     }
+    this.updateFocusLabels();
+    this.sun.position.set(this.player.x - 18, 32 + this.player.y, this.player.z + 18);
+    this.sun.target.position.set(this.player.x, 0, this.player.z);
     this.renderer.render(this.scene, this.camera);
-    this.qualityTime += dt;
-    this.qualityFrames++;
+    this.qualityTime += document.hidden || this.state === 'paused' ? 0 : wallDt;
+    if (!document.hidden && this.state !== 'paused') this.qualityFrames++;
     if (this.qualityTime > 5) {
       const fps = this.qualityFrames / this.qualityTime;
-      if (fps < 28 && this.renderer.getPixelRatio() > 1) this.renderer.setPixelRatio(1);
+      const ratio = this.renderer.getPixelRatio();
+      if (!this.softwareTest) {
+        const floor = Math.min(this.maxPixelRatio, 1.25);
+        if (fps < 26 && ratio > floor) this.renderer.setPixelRatio(Math.max(floor, ratio - 0.25));
+        else if (fps > 50 && ratio < this.maxPixelRatio)
+          this.renderer.setPixelRatio(Math.min(this.maxPixelRatio, ratio + 0.25));
+      }
       this.qualityTime = 0;
       this.qualityFrames = 0;
     }
@@ -1086,7 +1154,7 @@ export class Game {
     this.updateReady = true;
     this.updateAction = callback;
     this.ui.el('update-button').hidden = false;
-    this.ui.el('update-button').textContent = 'New adventure ready · tap to save & update';
+    this.ui.el('update-button').textContent = 'Save & update';
     if (this.state === 'menu') this.activateUpdate();
   }
   private activateUpdate() {
@@ -1116,6 +1184,9 @@ export class Game {
           }
         : null,
       renderer: {
+        pixelRatio: this.renderer.getPixelRatio(),
+        visibleLabels: this.focusLabels.filter((item) => item.tag.visible).length,
+        obstacles: this.world.obstacles,
         calls: this.renderer.info.render.calls,
         triangles: this.renderer.info.render.triangles,
         geometries: this.renderer.info.memory.geometries,

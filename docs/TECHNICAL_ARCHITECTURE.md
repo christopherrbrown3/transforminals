@@ -31,3 +31,11 @@ Playwright covers Chromium desktop and WebKit at a 1194×834 iPad-landscape emul
 ## Performance and privacy
 
 Aim for responsive 30–60 FPS on a reasonably modern iPad, quick startup, and bounded memory. Load biome assets progressively. Avoid analytics or external calls unless separately justified and documented; the game should remain playable offline after caching.
+
+## v0.2 rendering and screen clarity
+
+The renderer starts at the device pixel ratio, capped at 2. Directional PCF soft shadows add contact and shape, with a 2048-square map around the player. Environment batches separate substantial shadow casters from flat paths and small groundcover. Rounded substantial blocks retain the toy silhouette, and full prop footprints reserve space around rescue pads, portals, NPCs, and routes. Obstacle height metadata supports camera sight-line clearance and movement collision.
+
+Adaptive quality measures elapsed animation-frame time separately from capped simulation steps. Every five active seconds it can lower resolution by a quarter step, to a minimum of 1.25 (or the device ratio if lower), and restore detail above 50 FPS. Hidden and paused time is excluded. The explicit CI software-rendering query retains its half-scale canvas and disables shadows; production and visual captures use the regular renderer.
+
+The HUD keeps the region, rescue total, transformations, and controls at the edges. One compact message slot replaces stacked notices, automatic NPC paragraphs, and the persistent guide. At most one nearby cage/portal/gate label appears, with scene depth testing and screen-edge exclusion. Boss hearts appear only nearby. Help is optional in Pause. No save schema change is required.

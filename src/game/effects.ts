@@ -80,7 +80,9 @@ export function label(text: string, color = '#fff5dc', width = 5): THREE.Sprite 
   ctx.fillText(text, 384, 77, 720);
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
-  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false }));
+  const sprite = new THREE.Sprite(
+    new THREE.SpriteMaterial({ map: tex, depthTest: true, depthWrite: false }),
+  );
   sprite.scale.set(width, (width * 160) / 768, 1);
   sprite.renderOrder = 1;
   return sprite;

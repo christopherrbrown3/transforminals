@@ -8,7 +8,15 @@ type GameSnapshot = {
   defeated: string[];
   player: { x: number; y: number; z: number; vy: number };
   boss: { id: string; hits: number; total: number; height: number } | null;
-  renderer: { calls: number; triangles: number; geometries: number; textures: number };
+  renderer: {
+    pixelRatio: number;
+    visibleLabels: number;
+    obstacles: Array<{ x: number; z: number; radius: number; height?: number }>;
+    calls: number;
+    triangles: number;
+    geometries: number;
+    textures: number;
+  };
 };
 
 declare global {
@@ -51,6 +59,16 @@ test('starts in Meadow and moves through the visible touch controls', async ({ p
   const initial = await snapshot(page);
   expect(initial.biome).toBe('meadow');
   expect(initial.form).toBe('human');
+  await expect(page.locator('#dialogue')).toBeHidden();
+
+  await activate(page, page.locator('#pause-button'));
+  await expect(page.getByRole('button', { name: 'How to play' })).toBeVisible();
+  await activate(page, page.getByRole('button', { name: 'How to play' }));
+  await expect(page.getByRole('dialog', { name: 'Ready when you are' })).toContainText(
+    'Land on a cage roof to free a friend.',
+  );
+  await activate(page, page.locator('#help-done'));
+  await expect(page.locator('#dialogue')).toBeHidden();
 
   await page.locator('#collection-button').click();
   await expect(page.locator('[data-choose="fox"]')).toBeDisabled();
@@ -73,6 +91,116 @@ test('starts in Meadow and moves through the visible touch controls', async ({ p
   });
 
   await expect.poll(async () => (await snapshot(page)).player.x).not.toBe(initial.player.x);
+});
+
+test('keeps essential controls inside compact landscape and hides clutter', async ({ page }) => {
+  await page.goto('/?test=1&software=1');
+  await expect(page.locator('#start-button')).toBeVisible();
+  await activate(page, page.locator('#start-button'));
+  await expect(page.locator('#star-button')).toBeVisible();
+
+  for (const viewport of [
+    { width: 844, height: 390 },
+    { width: 1194, height: 834 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.waitForTimeout(250);
+    const result = await page.evaluate(() => {
+      const selectors = [
+        '#biome-name',
+        '#rescue-count',
+        '#map-button',
+        '#pause-button',
+        '#star-button',
+        '[data-move="forward"]',
+        '[data-move="left"]',
+        '[data-move="right"]',
+        '[data-move="backward"]',
+      ];
+      const bounds = Object.fromEntries(
+        selectors.map((selector) => {
+          const element = document.querySelector(selector);
+          if (!element) throw new Error(`Missing UI control: ${selector}`);
+          const rect = element.getBoundingClientRect();
+          return [selector, { x: rect.x, y: rect.y, right: rect.right, bottom: rect.bottom }];
+        }),
+      );
+      const dpad = selectors.slice(5).map((selector) => bounds[selector]);
+      const star = bounds['#star-button'];
+      return {
+        width: innerWidth,
+        height: innerHeight,
+        documentWidth: document.documentElement.scrollWidth,
+        bounds,
+        starDpadOverlap: dpad.some(
+          (control) =>
+            star.x < control.right &&
+            star.right > control.x &&
+            star.y < control.bottom &&
+            star.bottom > control.y,
+        ),
+      };
+    });
+
+    expect(result.documentWidth).toBeLessThanOrEqual(result.width + 1);
+    for (const [selector, rect] of Object.entries(result.bounds)) {
+      expect(rect.x, `${selector} left edge at ${viewport.width}px`).toBeGreaterThanOrEqual(-1);
+      expect(rect.y, `${selector} top edge at ${viewport.width}px`).toBeGreaterThanOrEqual(-1);
+      expect(rect.right, `${selector} right edge at ${viewport.width}px`).toBeLessThanOrEqual(
+        viewport.width + 1,
+      );
+      expect(rect.bottom, `${selector} bottom edge at ${viewport.width}px`).toBeLessThanOrEqual(
+        viewport.height + 1,
+      );
+    }
+    expect(result.starDpadOverlap).toBe(false);
+    const renderer = await snapshot(page);
+    expect(renderer.renderer.pixelRatio).toBeLessThanOrEqual(0.5);
+    expect(renderer.renderer.visibleLabels).toBeLessThanOrEqual(1);
+  }
+});
+
+test('stops at a solid obstacle instead of walking through it', async ({ page }) => {
+  await page.goto('/?test=1&software=1');
+  await activate(page, page.locator('#start-button'));
+  const initial = await snapshot(page);
+  const obstacles = initial.renderer.obstacles;
+  const candidates = obstacles.filter(
+    (obstacle) =>
+      obstacle.z < -10 &&
+      obstacle.z > -25 &&
+      Math.abs(obstacle.x) > 14 &&
+      Math.abs(obstacle.x) < 22,
+  );
+  const obstacle = candidates.find((candidate) => {
+    const startX = candidate.x - Math.sign(candidate.x) * (candidate.radius + 1.5);
+    return !obstacles.some((other) => {
+      if (other === candidate) return false;
+      const low = Math.min(startX, candidate.x);
+      const high = Math.max(startX, candidate.x);
+      return (
+        Math.abs(other.z - candidate.z) < other.radius + 0.4 && other.x >= low && other.x <= high
+      );
+    });
+  });
+  expect(obstacle, 'a clear approach to a solid Meadow obstacle exists').toBeDefined();
+  await page.evaluate(
+    ({ x, z, radius }) => window.__game!.teleport(x - Math.sign(x) * (radius + 1.5), z),
+    obstacle!,
+  );
+  await page.keyboard.down(obstacle!.x > 0 ? 'ArrowRight' : 'ArrowLeft');
+  await expect
+    .poll(async () => {
+      const player = (await snapshot(page)).player;
+      return Math.hypot(player.x - obstacle!.x, player.z - obstacle!.z);
+    })
+    .toBeLessThanOrEqual(obstacle!.radius + 0.8);
+  await page.keyboard.up('ArrowLeft');
+  await page.keyboard.up('ArrowRight');
+  const player = (await snapshot(page)).player;
+  const distance = Math.hypot(player.x - obstacle!.x, player.z - obstacle!.z);
+  expect(distance).toBeGreaterThanOrEqual(obstacle!.radius + 0.3);
+  expect(distance).toBeLessThanOrEqual(obstacle!.radius + 0.8);
 });
 
 test('rescues the first cage with the star button and keeps the fox after reload', async ({

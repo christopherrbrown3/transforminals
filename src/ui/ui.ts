@@ -17,7 +17,9 @@ export interface UIActions {
 export class UI {
   private panel: HTMLElement;
   private messageTimer = 0;
+  private dialogueTimer = 0;
   private previousForms = '';
+  private previousBoss = '';
   private form = 'human';
   constructor(
     private root: HTMLElement,
@@ -26,15 +28,15 @@ export class UI {
   ) {
     root.innerHTML = `<canvas id="world" aria-label="Transforminals 3D adventure"></canvas>
  <div id="hud" hidden>
- <header class="topbar"><div class="location"><span class="location-mark">${icon('paw', 22)}</span><div><strong id="biome-name">Clover Meadow</strong><small id="biome-subtitle">A little jump. A big adventure.</small></div></div><div class="top-actions"><div class="progress-pill">${icon('paw', 20)}<strong id="rescue-count">0 / ${CREATURES.length}</strong><span>rescued</span></div><button id="map-button" class="icon-button" aria-label="World map">${icon('map')}</button><button id="pause-button" class="icon-button" aria-label="Pause and settings">${icon('pause')}</button></div></header>
- <aside class="forms-bar" aria-label="Your transformations"><span class="rail-label">BE YOU</span><div id="forms"></div><button id="collection-button" class="collection-button" aria-label="Animal collection">${icon('paw')}<span>Friends</span></button></aside>
+ <header class="topbar"><div class="location"><span class="location-mark">${icon('paw', 22)}</span><div><strong id="biome-name">Clover Meadow</strong></div></div><div class="top-actions"><div class="progress-pill">${icon('paw', 20)}<strong id="rescue-count">0 / ${CREATURES.length}</strong><span>rescued</span></div><button id="map-button" class="icon-button" aria-label="World map">${icon('map')}</button><button id="pause-button" class="icon-button" aria-label="Pause and settings">${icon('pause')}</button></div></header>
+ <aside class="forms-bar" aria-label="Your transformations"><div id="forms"></div><button id="collection-button" class="collection-button" aria-label="Animal collection">${icon('paw')}<span>Friends</span></button></aside>
  <div id="boss-hud" hidden><strong id="boss-name"></strong><div id="boss-hearts"></div><span id="boss-hits"></span></div>
- <div id="discovery" hidden></div><div id="dialogue" hidden role="status"></div><div id="toast" hidden role="status"></div>
- <div class="bottom-note"><div id="guide">Jump onto the cage to rescue your first friend.</div><span id="form-name">Calvin</span> <span class="dot">·</span> <span id="power-name">Jump</span><small class="desktop-help">WASD / arrows to move · Space to jump · M for map</small></div>
+ <div id="dialogue" hidden role="status"></div><div id="toast" hidden role="status"></div>
+
  <div class="touch-controls"><button id="star-button" aria-label="Jump or use power">${icon('star', 38)}<span id="star-label">JUMP</span></button><div class="dpad" aria-label="Movement controls"><button data-move="forward" class="forward" aria-label="Move forward">${icon('up', 32)}</button><button data-move="left" class="left" aria-label="Move left">${icon('left', 32)}</button><button data-move="backward" class="backward" aria-label="Move backward">${icon('down', 32)}</button><button data-move="right" class="right" aria-label="Move right">${icon('right', 32)}</button><i></i></div></div>
  <button id="update-button" hidden>A fresh adventure update is ready</button><div id="cutscene" hidden><p id="cutscene-text"></p><button id="skip-button">Skip ${icon('right', 18)}</button></div>
  </div>
- <section id="title-screen" class="title-screen"><div class="title-copy"><div class="calvin-badge">${icon('spark', 18)} A wild adventure by Calvin</div><h1>TRANS<span>FORMINALS</span></h1><p class="title-tagline">Little rescues.<br>Enormous possibilities.</p><p class="title-description">Jump on cages. Make new friends.<br>Become anyone you rescue.</p><button id="start-button" class="primary-button">${icon('play', 23)} ${save.rescued.length ? 'Continue adventure' : 'Let’s get wild'}</button><p class="title-note">No lives to lose. Just a whole world to find.</p></div><div class="title-world-label">CLOVER MEADOW <span>your adventure starts here</span></div><span class="version">v0.1 · Made for Calvin</span></section>
+ <section id="title-screen" class="title-screen"><div class="title-copy"><div class="calvin-badge">${icon('spark', 18)} A wild adventure by Calvin</div><h1>TRANS<span>FORMINALS</span></h1><p class="title-tagline">Little rescues.<br>Enormous possibilities.</p><p class="title-description">Jump on cages. Make new friends.<br>Become anyone you rescue.</p><button id="start-button" class="primary-button">${icon('play', 23)} ${save.rescued.length ? 'Continue adventure' : 'Let’s get wild'}</button><p class="title-note">No lives to lose. Just a whole world to find.</p></div><div class="title-world-label">CLOVER MEADOW <span>your adventure starts here</span></div><span class="version">v0.2 · Made for Calvin</span></section>
  <section id="panel" class="panel-backdrop" hidden></section><div id="loading" hidden>Growing a new corner of the world…</div><div id="rotate-hint">More room for adventure in landscape.</div>`;
     this.panel = this.el('panel');
     this.el('start-button').onclick = () => {
@@ -94,8 +96,7 @@ export class UI {
       .forEach((b) => (b.onclick = () => this.actions.form(b.dataset.form!)));
     this.el('rescue-count').textContent = `${this.save.rescued.length} / ${CREATURES.length}`;
     const c = getCreature(current);
-    this.el('form-name').textContent = c.name;
-    this.el('power-name').textContent = c.power;
+    this.el('star-button').setAttribute('title', c.power);
     this.el('star-label').textContent =
       current === 'human'
         ? 'JUMP'
@@ -108,39 +109,42 @@ export class UI {
   biome(id: BiomeId) {
     const b = BIOMES.find((b) => b.id === id)!;
     this.el('biome-name').textContent = b.name;
-    this.el('biome-subtitle').textContent = b.subtitle;
-  }
-  guide(text: string) {
-    this.el('guide').textContent = text;
   }
   toast(text: string) {
+    this.hideDialogue();
     const el = this.el('toast');
     el.textContent = text;
     el.hidden = false;
     window.clearTimeout(this.messageTimer);
-    this.messageTimer = window.setTimeout(() => (el.hidden = true), 4200);
+    this.messageTimer = window.setTimeout(() => (el.hidden = true), 3000);
   }
   dialogue(name: string, text: string) {
+    // Deliberate interactions share one small message slot with rescue notices.
+    this.el('toast').hidden = true;
+    window.clearTimeout(this.dialogueTimer);
     const el = this.el('dialogue');
-    el.innerHTML = '';
+    el.replaceChildren();
     const strong = document.createElement('strong');
     strong.textContent = name;
     const p = document.createElement('p');
     p.textContent = text;
     el.append(strong, p);
     el.hidden = false;
+    this.dialogueTimer = window.setTimeout(() => this.hideDialogue(), 3000);
   }
   hideDialogue() {
+    window.clearTimeout(this.dialogueTimer);
     this.el('dialogue').hidden = true;
   }
   arrival(name: string) {
-    this.el('discovery').textContent = name;
-    this.el('discovery').hidden = false;
-    window.setTimeout(() => (this.el('discovery').hidden = true), 2400);
+    this.toast(name);
   }
   boss(name: string, hits: number, total: number, hearts: number) {
     const el = this.el('boss-hud');
     el.hidden = false;
+    const key = `${name}:${hits}:${total}:${hearts}`;
+    if (key === this.previousBoss) return;
+    this.previousBoss = key;
     this.el('boss-name').textContent = name;
     this.el('boss-hearts').innerHTML = Array.from(
       { length: 3 },
@@ -152,11 +156,15 @@ export class UI {
     this.el('boss-hud').hidden = true;
   }
   cutscene(text: string) {
+    this.hideDialogue();
+    this.el('toast').hidden = true;
     this.el('cutscene').hidden = false;
+    this.el('hud').classList.add('cinematic');
     this.el('cutscene-text').textContent = text;
   }
   endCutscene() {
     this.el('cutscene').hidden = true;
+    this.el('hud').classList.remove('cinematic');
   }
   close() {
     this.panel.hidden = true;
@@ -164,6 +172,8 @@ export class UI {
     this.actions.pause(false);
   }
   private open(title: string, content: string) {
+    this.hideDialogue();
+    this.el('toast').hidden = true;
     this.actions.pause(true);
     this.panel.innerHTML = `<section class="panel" role="dialog" aria-modal="true" aria-label="${title}"><div class="panel-heading"><h2>${title}</h2><button id="close-panel" class="icon-button" aria-label="Close">${icon('close')}</button></div>${content}</section>`;
     this.panel.hidden = false;
@@ -211,7 +221,7 @@ export class UI {
   settings() {
     this.open(
       'Take a breather',
-      `<p class="panel-intro">Your adventure saves on this device. Come back whenever you like.</p><label class="setting-row">Sound <input id="muted-setting" type="checkbox" ${!this.save.settings.muted ? 'checked' : ''}></label><label class="setting-row">Volume <input id="volume-setting" type="range" min="0" max="1" step="0.05" value="${this.save.settings.volume}"></label><label class="setting-row">Gentle motion <input id="motion-setting" type="checkbox" ${this.save.settings.reducedMotion ? 'checked' : ''}></label><p class="install-note">On iPad: Safari → Share → Add to Home Screen. Open once online to pack your offline adventure.</p><div class="settings-actions"><button id="resume-button" class="primary-button">Keep exploring ${icon('play', 18)}</button><button id="memory-button" class="secondary-button" ${this.save.defeated.includes('demon-lizard') ? '' : 'disabled'}>Replay the thank-you party</button><button id="reset-button" class="text-button">Start a new adventure…</button></div><small class="save-note">v0.1.0 · Local saves · Original creatures & music</small>`,
+      `<p class="panel-intro">Your adventure saves on this device. Come back whenever you like.</p><label class="setting-row">Sound <input id="muted-setting" type="checkbox" ${!this.save.settings.muted ? 'checked' : ''}></label><label class="setting-row">Volume <input id="volume-setting" type="range" min="0" max="1" step="0.05" value="${this.save.settings.volume}"></label><label class="setting-row">Gentle motion <input id="motion-setting" type="checkbox" ${this.save.settings.reducedMotion ? 'checked' : ''}></label><p class="install-note">On iPad: Safari → Share → Add to Home Screen. Open once online to pack your offline adventure.</p><div class="settings-actions"><button id="resume-button" class="primary-button">Keep exploring ${icon('play', 18)}</button><button id="help-button" class="secondary-button">How to play</button><button id="memory-button" class="secondary-button" ${this.save.defeated.includes('demon-lizard') ? '' : 'disabled'}>Replay the thank-you party</button><button id="reset-button" class="text-button">Start a new adventure…</button></div><small class="save-note">v0.2.0 · Local saves · Original creatures & music</small>`,
     );
     this.el('muted-setting').onchange = () => {
       this.save.settings.muted = !(this.el('muted-setting') as HTMLInputElement).checked;
@@ -225,12 +235,20 @@ export class UI {
       this.save.settings.reducedMotion = (this.el('motion-setting') as HTMLInputElement).checked;
       this.actions.settings();
     };
+    this.el('help-button').onclick = () => this.help();
     this.el('resume-button').onclick = () => this.close();
     this.el('memory-button').onclick = () => {
       this.close();
       this.actions.replay();
     };
     this.el('reset-button').onclick = () => this.confirmReset();
+  }
+  private help() {
+    this.open(
+      'Ready when you are',
+      `<div class="play-help"><p>${icon('up')} Move with the arrow buttons, WASD, or keyboard arrows.</p><p>${icon('star')} Tap the star or press Space to jump. Land on a cage roof to free a friend.</p><p>${icon('paw')} Tap a friend on the left to become them. The star uses their power. Hold it to fly or swim up.</p><p>${icon('map')} Glowing rings lead to new places. The map lets you revisit them.</p><p>You can’t lose. Explore as much as you like.</p></div><button id="help-done" class="primary-button">Let’s explore ${icon('play', 18)}</button>`,
+    );
+    this.el('help-done').onclick = () => this.close();
   }
   private confirmReset() {
     this.open(
