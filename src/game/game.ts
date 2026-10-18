@@ -312,7 +312,15 @@ export class Game {
           this.player.x - this.encounter.model.position.x,
           this.player.z - this.encounter.model.position.z,
         ) < 7;
-      this.player.vy = nearBoss ? 12 : swimming ? 4.8 : creature.id === 'giraffe' ? 10.8 : 9.6;
+      this.player.vy = nearBoss
+        ? this.encounter?.data.id === 'demon-lizard'
+          ? 16.5
+          : 12
+        : swimming
+          ? 4.8
+          : ['giraffe', 'tiger'].includes(creature.id)
+            ? 10.8
+            : 9.6;
       this.jumpCooldown = 0.32;
       this.powerTime = 1.2;
       this.audio.play('jump');
@@ -376,6 +384,7 @@ export class Game {
       this.form === 'fox' && this.foxAsset ? this.foxAsset.clone(true) : createCreature(this.form);
     this.avatar.userData.sharedAsset = this.form === 'fox' && !!this.foxAsset;
     this.avatar.rotation.y = rotation;
+    if (getCreature(this.form).kind === 'giant') this.avatar.scale.setScalar(2);
     this.scene.add(this.avatar);
     if (this.avatar.userData.sharedAsset) {
       this.mixer = new THREE.AnimationMixer(this.avatar);
@@ -623,11 +632,15 @@ export class Game {
       return;
     }
     const model = createBoss(data.id);
+    const size = data.id === 'demon-lizard' ? 1.7 : 1;
+    model.scale.setScalar(size);
+    model.userData.baseScale = size;
+    model.userData.headHeight = Number(model.userData.headHeight) * size;
     model.position.set(0, 0, -19);
     model.rotation.y = 0;
     this.region.add(model);
     const tag = label(`${data.name} · head boops!`, '#ffe5a0', 6.2);
-    tag.position.y = data.id === 'demon-lizard' ? 5.8 : 4.6;
+    tag.position.y = data.id === 'demon-lizard' ? 4.8 : 4.6;
     model.add(tag);
     this.encounter = { data, model, hits: 0, cooldown: 0, active: false, defeating: 0 };
     const pad = new THREE.Mesh(
@@ -797,7 +810,9 @@ export class Game {
       dz /= length;
       const speed =
         c.speed *
-        (this.powerTime > 0 && ['fox', 'arctic-fox', 'rat', 'barracuda'].includes(c.id) ? 1.5 : 1);
+        (this.powerTime > 0 && (['fox', 'arctic-fox', 'rat'].includes(c.id) || c.kind === 'swim')
+          ? 1.5
+          : 1);
       this.player.x += dx * speed * dt;
       this.player.z += dz * speed * dt;
       const angle = Math.atan2(-dx, -dz);
@@ -835,6 +850,11 @@ export class Game {
     if (this.player.y < 0) {
       this.player.y = 0;
       this.player.vy = 0;
+      if (previousY > 0 && c.kind === 'giant') {
+        this.effects.burst(new THREE.Vector3(this.player.x, 0.3, this.player.z), 0xffd37a, 60);
+        this.audio.tone(90, 0.35, 0, 'sine', 0.2);
+        this.audio.tone(135, 0.3, 0.1, 'sine', 0.1);
+      }
     }
     if (this.starHeld && this.player.y === 0 && this.jumpCooldown <= 0) this.jump();
     const enc = this.encounter;
@@ -907,7 +927,9 @@ export class Game {
       this.player.z,
     );
     this.shadow.position.set(this.player.x, 0.065, this.player.z);
-    this.shadow.scale.setScalar(Math.max(0.4, 1 - this.player.y * 0.06));
+    this.shadow.scale.setScalar(
+      Math.max(0.4, 1 - this.player.y * 0.06) * (c.kind === 'giant' ? 2 : 1),
+    );
   }
   private updateNPCs(dt: number) {
     this.dialogueTime -= dt;
@@ -960,7 +982,7 @@ export class Game {
         enc.defeating += dt;
         const t = Math.min(1, enc.defeating / 2.7);
         enc.model.rotation.y += dt * (enc.data.id === 'flushington' ? 12 : 5);
-        enc.model.scale.setScalar(1 - t);
+        enc.model.scale.setScalar((1 - t) * Number(enc.model.userData.baseScale ?? 1));
         enc.model.position.y =
           enc.data.id === 'flushington' ? -t * 1.5 : Math.sin(t * Math.PI) * 1.5;
       } else {
@@ -991,8 +1013,8 @@ export class Game {
   private updateCamera(dt: number) {
     let desired = new THREE.Vector3(
       this.player.x + 3,
-      12 + this.player.y * 0.55,
-      this.player.z + 17,
+      (getCreature(this.form).kind === 'giant' ? 15 : 12) + this.player.y * 0.55,
+      this.player.z + (getCreature(this.form).kind === 'giant' ? 21 : 17),
     );
     const target = new THREE.Vector3(this.player.x, 1 + this.player.y * 0.6, this.player.z - 3);
     if (this.state === 'menu') {
@@ -1081,7 +1103,12 @@ export class Game {
       defeated: [...this.saves.data.defeated],
       player: { ...this.player },
       boss: this.encounter
-        ? { id: this.encounter.data.id, hits: this.encounter.hits, total: this.encounter.data.hits }
+        ? {
+            id: this.encounter.data.id,
+            hits: this.encounter.hits,
+            total: this.encounter.data.hits,
+            height: Number(this.encounter.model.userData.headHeight),
+          }
         : null,
       renderer: {
         calls: this.renderer.info.render.calls,
