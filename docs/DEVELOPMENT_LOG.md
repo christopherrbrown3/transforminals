@@ -37,3 +37,5 @@ Validation before PR: TypeScript, ESLint, production build, 17 unit tests; the g
 PR/main CI, deployment, and live update/save/offline evidence will be recorded after publication. Physical iPad installation, touch feel, and sustained hardware performance remain untested.
 
 The final review caught cage fitting replacing an intrinsic species scale. Fitting now multiplies that scale, and an additional geometry invariant checks all 22 creature models against the bars/roof bounds. The final local typecheck, lint, build, and all 18 unit tests pass.
+
+A final Chromium touch-gesture check at 844×390 found the inherited game gesture lock prevented scrolling through rescued forms. The selector and scrollable panels now allow vertical gestures while movement controls keep their existing lock. A native browser touch swipe advanced the 23-form list from scrollTop 0 to 129 after the fix (the same gesture previously stayed at 0). This is an emulated Chromium gesture check, not physical iPad testing.

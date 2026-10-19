@@ -993,3 +993,11 @@ body.dark-biome .location {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Scrollable menus own vertical gestures; the play controls retain the game gesture lock. */
+#forms,
+#forms button,
+.panel,
+.panel button {
+  touch-action: pan-y;
+}
