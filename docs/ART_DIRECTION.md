@@ -81,3 +81,13 @@ Cream field-guide panels and forest-green text frame the world. Rounded Fredoka 
 ## Validation boundaries
 
 The custom fox was created in the user's live Blender through MCP, rendered, and visually inspected. Its export was parsed by Three.js with correct floor placement, orientation, self-contained resources, and animation data. The TypeScript art modules passed type checking and ESLint. A Chromium gallery rendered all 29 models without page errors, including a visual inspection after static-mesh batching. Representative batched mesh counts: human 11, fox 16, tiger 12, giant reptile 9, Sproutzilla 9. The actual title scene and initial Meadow gameplay camera were also visually inspected. Broader biome camera checks, sustained frame rate, physical iPad performance, and interactive boss/cage behavior require the coordinating gameplay/QA checks; asset creation alone does not establish those results.
+
+## v0.4 species detail
+
+The 22 rescues now use individually authored geometry in `animalModels.ts`, retaining the soft construction-toy world. The red fox has taller triangular ears, a narrow muzzle and black socks; the Arctic fox has a compact body, rounded ears and thick pale paws. Tiger stripes and white cheek whiskers differ from the lion's mane and tufted tail. Giraffe ossicones, hippo high eyes/nostrils, camel pads, rat whiskers and cow split hooves provide visible identification cues.
+
+Aquatic silhouettes differ in depth, length, head width and fin profiles: the piranha is deep-bodied, the barracuda long and narrow, and the whale shark broad and spotted. The sea turtle has flippers and a scute shell. Bat wing membranes, falcon feather panels and moustache marks, and the moth's four patterned wings keep flyers distinct. Eight curling kraken arms and a segmented sea-serpent body preserve the fantasy roster. Primary anatomical references are recorded in [the creature study](CREATURE_REFERENCE.md); they inform original artwork, with no copied source imagery.
+
+Animated rigs vary stride, weight, wing rhythm, tail movement and tentacle motion. Compatible static siblings use per-vertex color batching, preserving authored colors and moving pivots while reducing draw calls. Cage fitting reserves idle-motion space. All player, cage, wildlife and ending instances use the same current model builders, including the fox; the earlier Blender export remains an archived asset.
+
+Portal rings use smoother circular geometry and an animated inner arc. One tightly fitted destination label appears farther away and renders above scenery so buildings cannot cut through its text. Arrival ripples dissipate without blocking movement; gentle motion uses a stationary brief fade. The City's east façades are staged beyond the falcon approach.

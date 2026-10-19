@@ -6,10 +6,10 @@ The following assets were authored specifically for Transforminals. They use the
 
 | Asset               | Source                                                                                   | Runtime output          | Notes                                                                                                                                                                        |
 | ------------------- | ---------------------------------------------------------------------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Pip the fox         | `assets/source/fox.blend`, `assets/source/create_fox.py`, `assets/source/isolate_fox.py` | `public/models/fox.glb` | Original blocky fox, authored using live Blender MCP; 95,776 bytes, 34 meshes, 41 model nodes, 2 idle animation clips                                                        |
+| Pip the fox         | `assets/source/fox.blend`, `assets/source/create_fox.py`, `assets/source/isolate_fox.py` | `public/models/fox.glb` | Archived original blocky fox, authored using live Blender MCP; 95,776 bytes, 34 meshes, 41 model nodes, 2 idle animation clips                                               |
 | Fox studio preview  | `assets/source/fox-preview.png`                                                          | documentation only      | Transparent 1,000 × 1,000 Blender render, visually inspected                                                                                                                 |
 | Creature study      | `assets/source/creature-gallery.png`                                                     | documentation only      | Chromium render of 23 playable forms (human and 22 rescue forms); bosses are separate models                                                                                 |
-| Creature collection | `src/game/creatures.ts`                                                                  | bundled JS              | Human, all 22 rescue forms, and six separate bosses; original procedural models and appendage animation                                                                      |
+| Creature collection | `src/game/creatures.ts`, `src/game/animalModels.ts`                                      | bundled JS              | Human, 22 individually detailed rescue forms, and six separate bosses; original procedural geometry and species-specific appendage animation                                 |
 | Ten regions         | `src/game/world.ts`                                                                      | bundled JS              | Original deterministic props, instanced meshes, terrain disk and paths                                                                                                       |
 | Cave network        | `src/game/caves.ts`                                                                      | bundled JS              | Authored room/tunnel layout, three surface exits, and an optional crystal-nook discovery; human traversal, discovery persistence and safe relocation pass in Chromium/WebKit |
 | Music and ambience  | `src/game/soundscapes.ts`, `src/game/audio.ts`                                           | synthesized at runtime  | Original biome motifs, ambient cues, effects, and Jazzy Finn phrase via Web Audio; no recording files                                                                        |
@@ -24,7 +24,7 @@ The fox export contains one scene, no external image/buffer URIs, and no objects
 - Animated pivots: `Bushy tail pivot`, `Friendly head pivot`.
 - Idle clips: `Pip | curious idle | Bushy tail pivot` and `Pip | curious idle | Friendly head pivot`.
 - Leg pivots: `Leg pivot 0` through `Leg pivot 3`.
-- The exported asset is independent of Blender and requires only the bundled Three.js GLTFLoader at runtime.
+- The exported asset is independent of Blender and can be inspected with Three.js GLTFLoader. Since v0.4 the playable fox uses the current procedural sculpture, matching its caged and wildlife forms; the earlier GLB remains bundled as an archived source asset.
 
 ## Rebuilding the fox
 
@@ -39,3 +39,7 @@ Three.js and other code dependencies are governed by their package licenses, sep
 ## Restrictions
 
 Minecraft, Pokémon, Godzilla, Mechagodzilla, and Skibidi Toilet names in the original brief express the designer's inspirations. This project includes no models, textures, music, logos, or other extracted assets from those properties. Public character models are original designs.
+
+## v0.4 creature studies
+
+`src/game/animalModels.ts` contains original toy sculptures. [Creature references](CREATURE_REFERENCE.md) records the primary zoological sources consulted for anatomy; no source photographs, textures, recordings, or models are copied or bundled. Fantasy characters retain original invented features. `assets/source/creature-land-v04.png` and `creature-water-v04.png` are browser renders of these project models, licensed with the original artwork under MIT. They replace neither the historical Blender study nor its source files.
