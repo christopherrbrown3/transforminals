@@ -19,6 +19,7 @@ export class UI {
   private messageTimer = 0;
   private dialogueTimer = 0;
   private previousForms = '';
+  private returnFocus: HTMLElement | null = null;
   private previousBoss = '';
   private form = 'human';
   constructor(
@@ -168,10 +169,14 @@ export class UI {
   }
   close() {
     this.panel.hidden = true;
+    this.el('hud').inert = false;
+    this.returnFocus?.focus();
     this.panel.innerHTML = '';
     this.actions.pause(false);
   }
   private open(title: string, content: string) {
+    if (this.panel.hidden) this.returnFocus = document.activeElement as HTMLElement;
+    this.el('hud').inert = true;
     this.hideDialogue();
     this.el('toast').hidden = true;
     this.actions.pause(true);

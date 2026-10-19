@@ -1,5 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 
+// Software GPU shader initialization can stall wall time before the jump simulation advances.
+const rescueTimeout = process.env.CI ? 15_000 : 6_000;
+
 type GameSnapshot = {
   state: string;
   biome: string;
@@ -211,7 +214,7 @@ test('rescues the first cage with the star button and keeps the fox after reload
   await page.evaluate(() => window.__game!.teleport(-7, -9));
   await activate(page, page.locator('#star-button'));
   await expect
-    .poll(async () => (await snapshot(page)).rescued.includes('fox'), { timeout: 6_000 })
+    .poll(async () => (await snapshot(page)).rescued.includes('fox'), { timeout: rescueTimeout })
     .toBe(true);
   await expect(page.locator('#rescue-count')).toHaveText('1 / 22');
 
@@ -236,7 +239,7 @@ test('rescues the first cage with the star button and keeps the fox after reload
 test('rescues all 22 required creatures through cage jumps, including the city cage behind the gate', async ({
   page,
 }) => {
-  test.setTimeout(120_000);
+  test.setTimeout(process.env.CI ? 180_000 : 120_000);
   await startGame(page);
 
   const cages: Array<[string, string, number, number]> = [
@@ -275,7 +278,9 @@ test('rescues all 22 required creatures through cage jumps, including the city c
     await page.evaluate(([cageX, cageZ]) => window.__game!.teleport(cageX, cageZ), [x, z]);
     await activate(page, page.locator('#star-button'));
     await expect
-      .poll(async () => (await snapshot(page)).rescued.includes(creature), { timeout: 6_000 })
+      .poll(async () => (await snapshot(page)).rescued.includes(creature), {
+        timeout: rescueTimeout,
+      })
       .toBe(true);
   }
 
@@ -296,7 +301,9 @@ test('rescues the City’s giant cow while the final arena remains locked', asyn
   await activate(page, page.locator('#star-button'));
 
   await expect
-    .poll(async () => (await snapshot(page)).rescued.includes('giant-cow'), { timeout: 6_000 })
+    .poll(async () => (await snapshot(page)).rescued.includes('giant-cow'), {
+      timeout: rescueTimeout,
+    })
     .toBe(true);
   expect((await snapshot(page)).boss).toBeNull();
 });
@@ -390,13 +397,29 @@ test('loads each planned biome and its HUD without a fatal page error', async ({
   expect(pageErrors).toEqual([]);
 });
 
-test('reaches Winter by walking through Meadow’s actual east portal', async ({ page }) => {
+test('reaches Desert by walking through Meadow’s east shortcut', async ({ page }) => {
   await startGame(page);
   await page.evaluate(() => window.__game!.teleport(28, -27));
   await page.keyboard.down('ArrowUp');
-  await expect.poll(async () => (await snapshot(page)).biome, { timeout: 6_000 }).toBe('winter');
+  await expect.poll(async () => (await snapshot(page)).biome, { timeout: 6_000 }).toBe('desert');
   await page.keyboard.up('ArrowUp');
-  await expect(page.locator('#biome-name')).toContainText('Snowcone Valley');
+  await expect(page.locator('#biome-name')).toContainText('Wobble Dunes');
+});
+
+test('forward gates keep leading into new biomes', async ({ page }) => {
+  test.setTimeout(45_000);
+  await startGame(page);
+  for (const destination of ['winter', 'savannah', 'desert']) {
+    await page.evaluate(() => window.__game!.teleport(0, -35));
+    await page.keyboard.down('ArrowUp');
+    try {
+      await expect
+        .poll(async () => (await snapshot(page)).biome, { timeout: 10_000 })
+        .toBe(destination);
+    } finally {
+      await page.keyboard.up('ArrowUp');
+    }
+  }
 });
 
 test('keeps the finale gated, then defeats the unlocked boss with five head stomps', async ({

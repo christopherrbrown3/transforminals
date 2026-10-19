@@ -33,3 +33,7 @@ Plan for five or six bosses total, including a friendly baby giant-lizard mini-b
 ## Tone, accessibility, and sound
 
 Use colorful, blocky, toy-like original art, expressive silhouettes, playful effects, short readable dialogue, gentle music, and clear feedback. Support mute/volume and reduced motion where practical. Avoid disturbing imagery, copyrighted music, and external runtime services.
+
+## Exploration gates — October 18 revision
+
+The user requested fewer repeated returns while walking forward. The far gate now favors an undiscovered biome, cycling through the registry until every region has been visited. One side gate returns to the place just left; the other offers a shortcut. All three destinations differ, and after the world is discovered the forward gate still avoids an immediate return. The map retains explicit revisits and Return to Meadow.

@@ -4,7 +4,6 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { createCreature, createBoss, animateCreature, batchCreatureMeshes } from './creatures';
 import { buildWorld, type BuiltWorld } from './world';
 import {
-  BIOMES,
   BOSSES,
   CAGE_POSITIONS,
   CREATURES,
@@ -22,6 +21,7 @@ import {
   rescue,
 } from './progression';
 import { SaveManager } from './save';
+import { portalDestinations } from './portals';
 import { AudioManager } from './audio';
 import { Effects, label, disposeObject } from './effects';
 import { UI } from '../ui/ui';
@@ -66,6 +66,7 @@ interface SceneTimeline {
 export class Game {
   state: GameState = 'menu';
   biome: BiomeId = 'meadow';
+  private arrivedFrom?: BiomeId;
   form = 'human';
   player = { x: 0, y: 0, z: 7, vy: 0 };
   readonly saves: SaveManager;
@@ -444,7 +445,9 @@ export class Game {
     disposeObject(previous);
     this.region = new THREE.Group();
     this.scene.add(this.region);
-    this.biome = getBiome(id).id;
+    const destination = getBiome(id).id;
+    if (this.biome !== destination) this.arrivedFrom = this.biome;
+    this.biome = destination;
     this.world = buildWorld(this.biome);
     this.region.add(this.world.group);
     this.scene.background = new THREE.Color(this.world.sky);
@@ -524,8 +527,12 @@ export class Game {
     pad.position.y = 1.501;
     bars.add(pad);
     const animal = createCreature(id);
-    animal.scale.setScalar(0.55);
-    animal.position.y = 0.18;
+    const bounds = new THREE.Box3().setFromObject(animal);
+    const size = bounds.getSize(new THREE.Vector3());
+    const center = bounds.getCenter(new THREE.Vector3());
+    const scale = Math.min(0.6, 1.05 / size.y, 2.6 / size.x, 2.6 / size.z);
+    animal.scale.setScalar(scale);
+    animal.position.set(-center.x * scale, 0.2 - bounds.min.y * scale, -center.z * scale);
     group.add(animal);
     const tag = label(`${getCreature(id).name} · jump`, '#fff5dc', 5.2);
     tag.position.y = 3;
@@ -573,13 +580,12 @@ export class Game {
     }
   }
   private addPortals() {
-    const index = BIOMES.findIndex((b) => b.id === this.biome);
+    const links = portalDestinations(this.biome, this.saves.data.discovered, this.arrivedFrom);
     const targets: [number, BiomeId][] = [
-      [-28, BIOMES[(index + BIOMES.length - 1) % BIOMES.length].id],
-      [0, 'meadow'],
-      [28, BIOMES[(index + 1) % BIOMES.length].id],
+      [-28, links.back],
+      [0, links.forward],
+      [28, links.shortcut],
     ];
-    if (this.biome === 'meadow') targets[1] = [0, 'rifts'];
     for (const [x, destination] of targets) {
       const group = new THREE.Group();
       const z = x === 0 ? -38 : -30;
@@ -660,11 +666,7 @@ export class Game {
       );
       door.position.y = 1.6;
       this.gate.add(door);
-      const text = label(
-        `Arena opens: ${this.saves.data.rescued.length}/${CREATURES.length} rescued`,
-        '#fff3c5',
-        10,
-      );
+      const text = label('Rescue every friend', '#fff3c5', 7);
       text.position.y = 4;
       this.gate.add(text);
       this.focusLabels.push({ tag: text, anchor: this.gate, range: 13 });
