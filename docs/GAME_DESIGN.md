@@ -10,7 +10,7 @@ Explore a readable region, follow landmarks or animal hints, jump onto an easy-t
 
 ## Player and controls
 
-The player starts as a human in Meadow. Landscape iPad touch controls are primary: a creature selector on the left, movement on the right, and a prominent star action button. Keyboard and mouse remain available. The camera follows automatically. Teach movement, jumping, rescue, transformation, and an ability through short in-world prompts.
+The player starts as a human in Meadow. Landscape iPad touch controls are primary: a creature selector on the left, movement on the right, and a prominent star action button. Keyboard and mouse remain available. The camera follows automatically. Following the October 18 polish feedback, start immediately without automatic training or recurring instruction panels. Cage roofs and the star action communicate the rescue interaction; Pause → How to play holds optional movement, rescue, transformation, and ability instructions. NPC speech follows deliberate star interactions rather than proximity.
 
 ## Transformations and rescue
 
@@ -33,3 +33,7 @@ Plan for five or six bosses total, including a friendly baby giant-lizard mini-b
 ## Tone, accessibility, and sound
 
 Use colorful, blocky, toy-like original art, expressive silhouettes, playful effects, short readable dialogue, gentle music, and clear feedback. Support mute/volume and reduced motion where practical. Avoid disturbing imagery, copyrighted music, and external runtime services.
+
+## Exploration gates — October 18 revision
+
+The user requested fewer repeated returns while walking forward. The far gate now favors an undiscovered biome, cycling through the registry until every region has been visited. One side gate returns to the place just left; the other offers a shortcut. All three destinations differ, and after the world is discovered the forward gate still avoids an immediate return. The map retains explicit revisits and Return to Meadow.

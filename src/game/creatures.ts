@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 /** All models use feet at Y=0 and look down -Z. No remote textures. */
 const ink = 0x243c3b;
@@ -63,7 +64,7 @@ const materials = new Map<number, THREE.MeshStandardMaterial>();
 function material(color: number) {
   let m = materials.get(color);
   if (!m) {
-    m = new THREE.MeshStandardMaterial({ color, roughness: 0.82, metalness: 0.03 });
+    m = new THREE.MeshStandardMaterial({ color, roughness: 0.7, metalness: 0.025 });
     materials.set(color, m);
   }
   return m.clone(); // Scene teardown owns each material.
@@ -75,7 +76,14 @@ function block(
   position: number[],
   rotation = 0,
 ) {
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(size[0], size[1], size[2]), material(color));
+  // A single bevel segment catches the sunlight while retaining a construction-toy silhouette.
+  // Tiny face markings stay flat and crisp rather than accumulating unnecessary triangles.
+  const smallest = Math.min(...size);
+  const geometry =
+    smallest >= 0.12 && Math.max(...size) >= 0.26
+      ? new RoundedBoxGeometry(size[0], size[1], size[2], 1, Math.min(0.055, smallest * 0.14))
+      : new THREE.BoxGeometry(size[0], size[1], size[2]);
+  const mesh = new THREE.Mesh(geometry, material(color));
   mesh.position.set(position[0], position[1], position[2]);
   mesh.rotation.z = rotation;
   mesh.castShadow = true;
@@ -186,6 +194,12 @@ function quad(id: string, g: THREE.Group, rig: Rig) {
     [0, -0.1, -0.64],
   );
   eyes(head, large ? 0.3 : 0.19, 0.1, large ? -0.45 : -0.335);
+  if (id.includes('fox')) {
+    block(g, 0xfff0cd, [0.46, 0.41, 0.05], [0, bodyY - 0.04, -0.535]);
+    for (const s of [-1, 1]) block(head, 0xfff0cd, [0.24, 0.18, 0.08], [s * 0.23, -0.13, -0.33]);
+  }
+  if (id === 'hippo')
+    for (const s of [-1, 1]) block(head, 0x706382, [0.1, 0.06, 0.04], [s * 0.3, -0.05, -0.63]);
   for (const s of [-1, 1]) {
     if (rat || id === 'hippo') {
       orb(head, c, [rat ? 0.24 : 0.15, rat ? 0.25 : 0.15, 0.09], [s * 0.35, 0.32, 0]);
@@ -337,6 +351,11 @@ function reptile(id: string, g: THREE.Group, rig: Rig) {
   if (mech) {
     for (const s of [-1, 1]) orb(g, 0xf3c96a, [0.16, 0.16, 0.12], [s * 0.67, 1.42, -0.25]);
     block(g, 0x5fe0e4, [0.32, 0.34, 0.07], [0, 1.25, -0.4]);
+    for (const s of [-1, 1]) {
+      block(g, 0x647e8e, [0.34, 0.23, 0.54], [s * 0.66, 1.42, -0.1]);
+      for (let k = 0; k < 3; k++)
+        block(g, 0xcfe2df, [0.24, 0.055, 0.04], [s * 0.34, 0.76 + k * 0.14, -0.35]);
+    }
   }
 }
 export function createCreature(id: string): THREE.Group {
@@ -350,14 +369,19 @@ export function createCreature(id: string): THREE.Group {
     block(g, 0xf5c79c, [0.59, 0.55, 0.5], [0, 1.45, 0]);
     block(g, 0x5f463c, [0.65, 0.16, 0.55], [0, 1.74, 0.02]);
     block(g, 0x5f463c, [0.16, 0.28, 0.55], [-0.25, 1.6, 0.02]);
+    block(g, 0x705141, [0.3, 0.13, 0.32], [0.12, 1.78, -0.13], -0.08);
     eyes(g, 0.16, 1.48, -0.27);
     block(g, 0xc98572, [0.14, 0.035, 0.02], [0, 1.29, -0.27]);
     for (const s of [-1, 1]) {
-      limb(g, rig, 0x4c6775, s * 0.17, 0.57, 0, 0.53, 0.24);
+      const leg = limb(g, rig, 0x4c6775, s * 0.17, 0.57, 0, 0.53, 0.24);
       block(g, 0xf5c79c, [0.2, 0.52, 0.24], [s * 0.43, 0.88, 0], s * 0.1);
-      block(g, 0xffd277, [0.27, 0.15, 0.39], [s * 0.17, 0.08, -0.06]);
+      block(leg, 0xffd277, [0.27, 0.15, 0.39], [0, -0.49, -0.06]);
+      block(leg, 0xfff0cd, [0.28, 0.04, 0.4], [0, -0.545, -0.06]);
+      block(g, 0x32726f, [0.12, 0.52, 0.04], [s * 0.19, 0.9, -0.19]);
     }
     block(g, 0xf0be6a, [0.43, 0.48, 0.2], [0, 0.89, 0.27]);
+    block(g, 0xffd984, [0.35, 0.14, 0.04], [0, 1.05, 0.39]);
+    block(g, 0x987348, [0.08, 0.11, 0.025], [0, 0.93, 0.4]);
   } else if (['shark', 'piranha', 'barracuda', 'whale-shark', 'leviathan'].includes(id))
     aquatic(id, g, rig);
   else if (['giant-reptile', 'mecha-reptile', 'salamander'].includes(id)) reptile(id, g, rig);
@@ -503,4 +527,14 @@ export function animateCreature(group: THREE.Group, time: number, moving: boolea
   });
   if (rig.tail) rig.tail.rotation.y = Math.sin(time * (moving ? 9 : 3)) * 0.21;
   if (rig.head) rig.head.rotation.z = Math.sin(time * 2) * 0.035;
+}
+
+/** Fit the measured model, including its intrinsic species scale, below a cage roof. */
+export function fitCagedCreature(animal: THREE.Group): void {
+  const bounds = new THREE.Box3().setFromObject(animal);
+  const size = bounds.getSize(new THREE.Vector3());
+  const center = bounds.getCenter(new THREE.Vector3());
+  const scale = Math.min(0.6, 1.05 / size.y, 2.6 / size.x, 2.6 / size.z);
+  animal.scale.multiplyScalar(scale);
+  animal.position.set(-center.x * scale, 0.2 - bounds.min.y * scale, -center.z * scale);
 }
