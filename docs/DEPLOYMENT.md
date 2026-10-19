@@ -37,3 +37,5 @@ The v0.1-to-v0.2 public update was verified in a held-open WebKit session, inclu
 Revert the offending release through the normal Git workflow and let the checked Pages pipeline publish the prior application state. Preserve save compatibility and use the existing versioned migration path. Avoid DNS changes as an application rollback mechanism.
 
 The v0.2 runtime `a37a5d55c52d3d4560737f41b144ce3fe8e648dd` was published by [run 39182479445](https://github.com/christopherrbrown3/transforminals/actions/runs/39182479445) and verified on the public HTTPS domain. See the development log for the cross-release save/offline evidence.
+
+The final v0.3 runtime `b0b73bef898febb9752ebd190e07e530b2d891cd` was published by [run 39222770418](https://github.com/christopherrbrown3/transforminals/actions/runs/39222770418). Public asset checks and held-session WebKit update/save/offline tests passed, including the final rapid-travel notice fix. See the development log for exact evidence and remaining device checks.
