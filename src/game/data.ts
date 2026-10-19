@@ -339,7 +339,7 @@ export const BIOMES: Biome[] = [
     npc: 'Pebble',
     dialogue: [
       'I am a very underground celebrity.',
-      'The surface rings always take you back safely.',
+      'Follow the little crystals. There’s a secret beyond the mushroom room.',
       'Crystal bats have sparkly pajamas.',
     ],
   },

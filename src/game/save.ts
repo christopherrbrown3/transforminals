@@ -20,6 +20,7 @@ export function migrateSave(input: unknown): SaveData {
     raw.rescued ?? raw.unlocked,
     CREATURES.map((c) => c.id),
   );
+  base.secrets = strings(raw.secrets, ['crystal-nook']);
   base.form =
     typeof raw.form === 'string' && (raw.form === 'human' || base.rescued.includes(raw.form))
       ? raw.form

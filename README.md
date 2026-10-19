@@ -4,11 +4,11 @@
 
 [Play Transforminals](https://transforminals.christopherbrown.ai) · [Requirements and evidence](docs/REQUIREMENTS.md) · [Development plan](docs/DEVELOPMENT_PLAN.md)
 
-## The first playable release
+## The adventure
 
-Version 0.1 connects ten compact environments: Clover Meadow, Snowcone Valley, Sunbeam Savannah, Wobble Dunes, Bubble Bay, Atlantis, Popcorn Peaks, Twinkle Caverns, the Giggle Rift, and Big Little City. There are 22 required animal rescues and transformations, wandering wildlife, six original bosses, local autosaves, original synthesized music, and a skippable thank-you party. The final arena opens after every required rescue; five head boops defeat the Demon Lizard while three hearts show its remaining health. Exploration continues afterward.
+Version 0.3 connects ten compact environments: Clover Meadow, Snowcone Valley, Sunbeam Savannah, Wobble Dunes, Bubble Bay, Atlantis, Popcorn Peaks, Twinkle Caverns, the Giggle Rift, and Big Little City. There are 22 required animal rescues and transformations, wandering wildlife, six original bosses, local autosaves, original synthesized music, and a skippable thank-you party. The final arena opens after every required rescue; five head boops defeat the Demon Lizard while three hearts show its remaining health. Exploration continues afterward.
 
-This is a playable adventure, with an explicit backlog for deeper biome exploration and device validation. The v0.2 polish pass removes automatic training, simplifies the HUD, adds sharper rendering and shadows, improves scenery spacing/collision, and makes forward gates favor unexplored regions. A live v0.1-to-v0.2 WebKit update preserved saved progress and offline play. Physical iPad installation, touch feel, and sustained performance still need device validation. Automated WebKit tests use an iPad-like profile; they are not physical iPad testing.
+Twinkle Caverns now has connected chambers, tunnels, three surface exits, and a hidden crystal nook. Each biome has original synthesized music and ambience; Jazzy Finn’s song sends an empty toy boat into a harmless splashy reef bump. The v0.2 polish pass removes automatic training, simplifies the HUD, adds sharper rendering and shadows, improves scenery spacing/collision, and makes forward gates favor unexplored regions. A live v0.1-to-v0.2 WebKit update preserved saved progress and offline play. Physical iPad installation, touch feel, and sustained performance still need device validation. Automated WebKit tests use an iPad-like profile; they are not physical iPad testing.
 
 ## How to play
 

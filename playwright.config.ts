@@ -2,12 +2,15 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests',
+  outputDir: 'test-results/gameplay',
   testIgnore: ['**/pwa/**'],
   fullyParallel: true,
   workers: process.env.CI ? 1 : 2,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
-  reporter: process.env.CI ? 'github' : 'list',
+  reporter: process.env.CI
+    ? [['github'], ['html', { open: 'never', outputFolder: 'playwright-report/gameplay' }]]
+    : 'list',
   use: {
     baseURL: 'http://127.0.0.1:5173',
     trace: 'retain-on-failure',

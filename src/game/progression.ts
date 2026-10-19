@@ -1,5 +1,5 @@
 import { CREATURES } from './data';
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 export interface SaveData {
   version: number;
   form: string;
@@ -7,6 +7,7 @@ export interface SaveData {
   defeated: string[];
   discovered: string[];
   portals: string[];
+  secrets: string[];
   location: { biome: string; x: number; z: number };
   settings: { muted: boolean; volume: number; reducedMotion: boolean };
 }
@@ -17,6 +18,7 @@ export const freshSave = (): SaveData => ({
   defeated: [],
   discovered: ['meadow'],
   portals: ['meadow'],
+  secrets: [],
   location: { biome: 'meadow', x: 0, z: 7 },
   settings: { muted: false, volume: 0.35, reducedMotion: false },
 });
