@@ -28,6 +28,7 @@ import {
 } from './progression';
 import { SaveManager } from './save';
 import { portalDestinations } from './portals';
+import { CAVE_LAYOUT, isCaveWalkable, nearestCaveWalkable } from './caves';
 import { AudioManager } from './audio';
 import { Effects, label, disposeObject } from './effects';
 import { UI } from '../ui/ui';
@@ -115,6 +116,9 @@ export class Game {
   private foxPromise: Promise<void>;
   private shadow: THREE.Mesh;
   private updateReady = false;
+  private testUpdateActivations = 0;
+  private seenCaveRooms = new Set<string>();
+  private sirenTime = 0;
   private updateAction?: () => void;
   constructor(root: HTMLElement) {
     let storage: Storage;
@@ -265,7 +269,8 @@ export class Game {
     this.player.x = loc.x;
     this.player.z = loc.z;
     this.player.y = 0;
-    this.lastSafe = { x: loc.x, z: loc.z };
+    if (this.biome === 'underground') Object.assign(this.player, nearestCaveWalkable(loc.x, loc.z));
+    this.lastSafe = { x: this.player.x, z: this.player.z };
     this.form = canTransform(this.saves.data, this.saves.data.form)
       ? this.saves.data.form
       : 'human';
@@ -354,6 +359,7 @@ export class Game {
       this.jumpCooldown = 0.32;
       this.powerTime = 1.2;
       this.audio.play('jump');
+      if (creature.id !== 'human') this.audio.creature(creature.id);
       this.effects.burst(
         new THREE.Vector3(this.player.x, 0.5 + this.player.y, this.player.z),
         new THREE.Color(creature.color).getHex(),
@@ -362,9 +368,13 @@ export class Game {
       for (const npc of this.npcs)
         if (npc.model.position.distanceTo(new THREE.Vector3(this.player.x, 0, this.player.z)) < 4) {
           npc.wobble = 1;
+          if (this.biome === 'ocean' && npc === this.npcs[0]) {
+            this.audio.siren();
+            this.sirenTime = 3;
+          }
           this.ui.dialogue(
             npc.name,
-            this.biome === 'ocean'
+            this.biome === 'ocean' && npc === this.npcs[0]
               ? 'Ba da bop! That’s my original jazz number.'
               : npc.line++ % 2 === 0
                 ? 'Boing! Ten out of ten for silliness.'
@@ -459,6 +469,8 @@ export class Game {
     this.scene.background = new THREE.Color(this.world.sky);
     this.scene.fog = new THREE.Fog(this.world.sky, 45, 105);
     this.focusLabels = [];
+    this.seenCaveRooms.clear();
+    this.sirenTime = 0;
     this.cages = [];
     this.npcs = [];
     this.portals = [];
@@ -932,7 +944,18 @@ export class Game {
     const hazard =
       this.player.y < 0.3 &&
       hazards.some((h) => Math.hypot(this.player.x - h.x, this.player.z - h.z) < h.radius);
-    if (Math.hypot(this.player.x, this.player.z) > 42 || this.player.y < -5 || hazard) {
+    const outsideCave =
+      this.biome === 'underground' &&
+      this.player.y < 0.3 &&
+      !isCaveWalkable(this.player.x, this.player.z);
+    if (
+      Math.hypot(this.player.x, this.player.z) > 42 ||
+      this.player.y < -5 ||
+      hazard ||
+      outsideCave
+    ) {
+      if (this.biome === 'underground')
+        this.lastSafe = nearestCaveWalkable(this.lastSafe.x, this.lastSafe.z);
       this.player.x = this.lastSafe.x;
       this.player.z = this.lastSafe.z;
       this.player.y = 1;
@@ -940,11 +963,19 @@ export class Game {
       this.ui.toast(
         hazard
           ? 'SPICY BOING! Back to comfy ground.'
-          : 'The world gives you a friendly boing back!',
+          : outsideCave
+            ? 'A friendly boing back to the cave path!'
+            : 'The world gives you a friendly boing back!',
       );
       this.audio.play('jump');
+      if (c.id !== 'human') this.audio.creature(c.id);
     }
-    if (this.player.y === 0 && !hazard && Math.hypot(this.player.x, this.player.z) < 39)
+    if (
+      this.player.y === 0 &&
+      !hazard &&
+      !outsideCave &&
+      Math.hypot(this.player.x, this.player.z) < 39
+    )
       this.lastSafe = { x: this.player.x, z: this.player.z };
     if (this.portalCooldown <= 0)
       for (const portal of this.portals)
@@ -953,6 +984,7 @@ export class Game {
           break;
         }
     animateCreature(this.avatar, this.elapsed, moving);
+    if (this.powerTime > 0 && ['turtle', 'kraken'].includes(c.id)) this.avatar.rotation.y += dt * 9;
     this.avatar.position.set(
       this.player.x,
       this.player.y + (moving ? 0.04 * Math.sin(this.elapsed * 12) : 0),
@@ -975,7 +1007,52 @@ export class Game {
       animateCreature(npc.model, this.elapsed + i, true);
     }
   }
+  private updateCaveDiscovery() {
+    if (this.biome !== 'underground') return;
+    const secret = CAVE_LAYOUT.secret;
+    if (
+      Math.hypot(this.player.x - secret.x, this.player.z - secret.z) < secret.radius &&
+      !this.saves.data.secrets.includes(secret.id)
+    ) {
+      this.saves.data.secrets.push(secret.id);
+      this.ui.toast(`${secret.name} discovered!`);
+      this.effects.burst(new THREE.Vector3(secret.x, 2, secret.z), 0xcdb8f0, 65);
+      this.audio.play('discovery');
+      this.saves.save();
+      this.seenCaveRooms.add(secret.id);
+    }
+    for (const room of CAVE_LAYOUT.rooms) {
+      if (
+        room.kind === 'entry' ||
+        room.kind === 'secret' ||
+        room.kind === 'exit' ||
+        this.seenCaveRooms.has(room.id)
+      )
+        continue;
+      if (Math.hypot(this.player.x - room.x, this.player.z - room.z) < room.radius * 0.65) {
+        this.seenCaveRooms.add(room.id);
+        this.ui.toast(room.name);
+      }
+    }
+  }
   private animateWorld(dt: number) {
+    const previousSirenTime = this.sirenTime;
+    this.sirenTime = Math.max(0, this.sirenTime - dt);
+    const boat = this.world.group.userData.sirenBoat as THREE.Group | undefined;
+    if (boat) {
+      const progress = (3 - this.sirenTime) / 3;
+      // The empty toy boat bumps a soft reef, tips, then rights itself for another song.
+      const pose =
+        progress < 0.45
+          ? Math.sin(((progress / 0.45) * Math.PI) / 2)
+          : progress < 0.7
+            ? 1
+            : Math.max(0, 1 - (progress - 0.7) / 0.3);
+      boat.rotation.z = pose * 1.1;
+      boat.position.set(12.5 - pose * 2, 0.15 + Math.sin(progress * Math.PI) * 0.15, -pose * 1.8);
+      if (previousSirenTime > 1.65 && this.sirenTime <= 1.65)
+        this.effects.burst(new THREE.Vector3(10.5, 0.8, -1.8), 0xc3e9df, 30);
+    }
     for (const cage of this.cages) {
       animateCreature(cage.animal, this.elapsed, false);
       if (cage.rescued) {
@@ -1114,6 +1191,7 @@ export class Game {
     this.portalCooldown = Math.max(0, this.portalCooldown - dt);
     if (this.state === 'playing') {
       this.updatePlayer(dt);
+      this.updateCaveDiscovery();
       this.updateNPCs(dt);
       this.audio.tick(this.elapsed, this.biome);
       this.saveTime += dt;
@@ -1168,7 +1246,11 @@ export class Game {
     }
     this.persist();
     this.pause(true);
-    this.updateAction?.();
+    const action = this.updateAction;
+    this.updateReady = false;
+    this.updateAction = undefined;
+    this.ui.el('update-button').hidden = true;
+    action?.();
   }
   private exposeTests() {
     const snapshot = () => ({
@@ -1177,6 +1259,19 @@ export class Game {
       form: this.form,
       rescued: [...this.saves.data.rescued],
       defeated: [...this.saves.data.defeated],
+      discovered: [...this.saves.data.discovered],
+      secrets: [...this.saves.data.secrets],
+      audio: this.audio.diagnostics(),
+      motionReduced: this.effects.reduced,
+      sirenTime: this.sirenTime,
+      sirenBoat: this.world.group.userData.sirenBoat
+        ? {
+            tilt: (this.world.group.userData.sirenBoat as THREE.Group).rotation.z,
+            x: (this.world.group.userData.sirenBoat as THREE.Group).position.x,
+            z: (this.world.group.userData.sirenBoat as THREE.Group).position.z,
+          }
+        : null,
+      updates: { pending: this.updateReady, activations: this.testUpdateActivations },
       player: { ...this.player },
       boss: this.encounter
         ? {
@@ -1198,6 +1293,10 @@ export class Game {
     });
     (window as unknown as { __game: unknown }).__game = {
       snapshot,
+      queueUpdate: () =>
+        this.notifyUpdate(() => {
+          this.testUpdateActivations++;
+        }),
       teleport: (x: number, z: number) => {
         this.player = { x, y: 0, z, vy: 0 };
         this.lastSafe = { x, z };

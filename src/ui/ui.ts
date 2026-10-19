@@ -37,7 +37,7 @@ export class UI {
  <div class="touch-controls"><button id="star-button" aria-label="Jump or use power">${icon('star', 38)}<span id="star-label">JUMP</span></button><div class="dpad" aria-label="Movement controls"><button data-move="forward" class="forward" aria-label="Move forward">${icon('up', 32)}</button><button data-move="left" class="left" aria-label="Move left">${icon('left', 32)}</button><button data-move="backward" class="backward" aria-label="Move backward">${icon('down', 32)}</button><button data-move="right" class="right" aria-label="Move right">${icon('right', 32)}</button><i></i></div></div>
  <button id="update-button" hidden>A fresh adventure update is ready</button><div id="cutscene" hidden><p id="cutscene-text"></p><button id="skip-button">Skip ${icon('right', 18)}</button></div>
  </div>
- <section id="title-screen" class="title-screen"><div class="title-copy"><div class="calvin-badge">${icon('spark', 18)} A wild adventure by Calvin</div><h1>TRANS<span>FORMINALS</span></h1><p class="title-tagline">Little rescues.<br>Enormous possibilities.</p><p class="title-description">Jump on cages. Make new friends.<br>Become anyone you rescue.</p><button id="start-button" class="primary-button">${icon('play', 23)} ${save.rescued.length ? 'Continue adventure' : 'Let’s get wild'}</button><p class="title-note">No lives to lose. Just a whole world to find.</p></div><div class="title-world-label">CLOVER MEADOW <span>your adventure starts here</span></div><span class="version">v0.2 · Made for Calvin</span></section>
+ <section id="title-screen" class="title-screen"><div class="title-copy"><div class="calvin-badge">${icon('spark', 18)} A wild adventure by Calvin</div><h1>TRANS<span>FORMINALS</span></h1><p class="title-tagline">Little rescues.<br>Enormous possibilities.</p><p class="title-description">Jump on cages. Make new friends.<br>Become anyone you rescue.</p><button id="start-button" class="primary-button">${icon('play', 23)} ${save.rescued.length ? 'Continue adventure' : 'Let’s get wild'}</button><p class="title-note">No lives to lose. Just a whole world to find.</p></div><div class="title-world-label">CLOVER MEADOW <span>your adventure starts here</span></div><span class="version">v0.3 · Made for Calvin</span></section>
  <section id="panel" class="panel-backdrop" hidden></section><div id="loading" hidden>Growing a new corner of the world…</div><div id="rotate-hint">More room for adventure in landscape.</div>`;
     this.panel = this.el('panel');
     this.el('start-button').onclick = () => {
@@ -86,6 +86,7 @@ export class UI {
     if (key === this.previousForms) return;
     this.previousForms = key;
     const unlocked = [HUMAN, ...CREATURES.filter((c) => this.save.rescued.includes(c.id))];
+    const scrollTop = this.el('forms').scrollTop;
     this.el('forms').innerHTML = unlocked
       .map(
         (c) =>
@@ -95,6 +96,16 @@ export class UI {
     this.root
       .querySelectorAll<HTMLButtonElement>('[data-form]')
       .forEach((b) => (b.onclick = () => this.actions.form(b.dataset.form!)));
+    this.el('forms').scrollTop = scrollTop;
+    const selected = this.root.querySelector<HTMLElement>(`[data-form="${current}"]`);
+    if (selected) {
+      const list = this.el('forms');
+      const selectedRect = selected.getBoundingClientRect();
+      const listRect = list.getBoundingClientRect();
+      if (selectedRect.top < listRect.top || selectedRect.bottom > listRect.bottom)
+        list.scrollTop +=
+          selectedRect.top - listRect.top - (list.clientHeight - selectedRect.height) / 2;
+    }
     this.el('rescue-count').textContent = `${this.save.rescued.length} / ${CREATURES.length}`;
     const c = getCreature(current);
     this.el('star-button').setAttribute('title', c.power);
@@ -205,7 +216,7 @@ export class UI {
   collection() {
     this.open(
       `Your wild friends · ${this.save.rescued.length}/${CREATURES.length}`,
-      `<p class="panel-intro">Hop onto cage roofs to rescue friends. Tap any rescued friend to become them.</p><div class="collection-grid">${[
+      `<p class="panel-intro">Hop onto cage roofs to rescue friends. Tap any rescued friend to become them.</p>${this.save.secrets.includes('crystal-nook') ? `<p class="panel-intro">${icon('spark', 18)} Humming Crystal Nook discovered</p>` : ''}<div class="collection-grid">${[
         HUMAN,
         ...CREATURES,
       ]
@@ -226,7 +237,7 @@ export class UI {
   settings() {
     this.open(
       'Take a breather',
-      `<p class="panel-intro">Your adventure saves on this device. Come back whenever you like.</p><label class="setting-row">Sound <input id="muted-setting" type="checkbox" ${!this.save.settings.muted ? 'checked' : ''}></label><label class="setting-row">Volume <input id="volume-setting" type="range" min="0" max="1" step="0.05" value="${this.save.settings.volume}"></label><label class="setting-row">Gentle motion <input id="motion-setting" type="checkbox" ${this.save.settings.reducedMotion ? 'checked' : ''}></label><p class="install-note">On iPad: Safari → Share → Add to Home Screen. Open once online to pack your offline adventure.</p><div class="settings-actions"><button id="resume-button" class="primary-button">Keep exploring ${icon('play', 18)}</button><button id="help-button" class="secondary-button">How to play</button><button id="memory-button" class="secondary-button" ${this.save.defeated.includes('demon-lizard') ? '' : 'disabled'}>Replay the thank-you party</button><button id="reset-button" class="text-button">Start a new adventure…</button></div><small class="save-note">v0.2.0 · Local saves · Original creatures & music</small>`,
+      `<p class="panel-intro">Your adventure saves on this device. Come back whenever you like.</p><label class="setting-row">Sound <input id="muted-setting" type="checkbox" ${!this.save.settings.muted ? 'checked' : ''}></label><label class="setting-row">Volume <input id="volume-setting" type="range" min="0" max="1" step="0.05" value="${this.save.settings.volume}"></label><label class="setting-row">Gentle motion <input id="motion-setting" type="checkbox" ${this.save.settings.reducedMotion ? 'checked' : ''}></label><p class="install-note">On iPad: Safari → Share → Add to Home Screen. Open once online to pack your offline adventure.</p><div class="settings-actions"><button id="resume-button" class="primary-button">Keep exploring ${icon('play', 18)}</button><button id="help-button" class="secondary-button">How to play</button><button id="memory-button" class="secondary-button" ${this.save.defeated.includes('demon-lizard') ? '' : 'disabled'}>Replay the thank-you party</button><button id="reset-button" class="text-button">Start a new adventure…</button></div><small class="save-note">v0.3.0 · Local saves · Original creatures & music</small>`,
     );
     this.el('muted-setting').onchange = () => {
       this.save.settings.muted = !(this.el('muted-setting') as HTMLInputElement).checked;

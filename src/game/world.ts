@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { buildCaveFloorplan, CAVE_LAYOUT, isCaveWalkable } from './caves';
 
 export interface WorldObstacle {
   x: number;
@@ -16,7 +17,7 @@ export interface BuiltWorld {
   sky: number;
   ground: number;
 }
-type Shape = 'box' | 'rounded' | 'rock' | 'cone' | 'cylinder';
+type Shape = 'box' | 'rounded' | 'rock' | 'cone' | 'cylinder' | 'arch';
 interface Stamp {
   position: [number, number, number];
   size: [number, number, number];
@@ -139,7 +140,10 @@ export function buildWorld(id: string): BuiltWorld {
   }
   const groundMesh = new THREE.Mesh(
     new THREE.CylinderGeometry(43, 43, 1.5, 64),
-    new THREE.MeshStandardMaterial({ color: p.ground, roughness: 1 }),
+    new THREE.MeshStandardMaterial({
+      color: id === 'underground' ? 0x5d627c : p.ground,
+      roughness: 1,
+    }),
   );
   groundMesh.position.y = -0.75;
   groundMesh.receiveShadow = true;
@@ -152,18 +156,20 @@ export function buildWorld(id: string): BuiltWorld {
   base.position.y = -2.75;
   group.add(base);
   // Sand-colored shoulders, inset paving, and scattered pebbles add depth without raised collision.
-  box(p.cliff, 0, 0.007, -13, 5.1, 0.025, 53);
-  box(p.path, 0, 0.025, -13, 4.5, 0.04, 53);
-  box(p.cliff, 0, 0.007, -30, 59, 0.025, 4.4);
-  box(p.path, 0, 0.027, -30, 58, 0.04, 3.6);
-  for (const [x, z] of cages.slice(0, 6)) {
-    box(p.path, x / 2, 0.025, z, Math.abs(x) + 4, 0.045, 2.1);
-    stamp('cylinder', p.path, [x, 0.035, z], [5.5, 0.05, 5.5]);
-  }
-  // Small colored stepping tiles make the main trail easy to follow.
-  for (let z = 8; z > -36; z -= 3) {
-    box(id === 'ocean' ? 0xd7e6c6 : 0xf6e3b9, 0.6, 0.057, z, 0.65, 0.045, 0.85, 0.1);
-    box(p.cliff, -1.6, 0.052, z + 1, 0.18, 0.025, 0.31, -0.18);
+  if (id !== 'underground') {
+    box(p.cliff, 0, 0.007, -13, 5.1, 0.025, 53);
+    box(p.path, 0, 0.025, -13, 4.5, 0.04, 53);
+    box(p.cliff, 0, 0.007, -30, 59, 0.025, 4.4);
+    box(p.path, 0, 0.027, -30, 58, 0.04, 3.6);
+    for (const [x, z] of cages.slice(0, 6)) {
+      box(p.path, x / 2, 0.025, z, Math.abs(x) + 4, 0.045, 2.1);
+      stamp('cylinder', p.path, [x, 0.035, z], [5.5, 0.05, 5.5]);
+    }
+    // Small colored stepping tiles make the main trail easy to follow.
+    for (let z = 8; z > -36; z -= 3) {
+      box(id === 'ocean' ? 0xd7e6c6 : 0xf6e3b9, 0.6, 0.057, z, 0.65, 0.045, 0.85, 0.1);
+      box(p.cliff, -1.6, 0.052, z + 1, 0.18, 0.025, 0.31, -0.18);
+    }
   }
 
   function tree(x: number, z: number, scale = 1) {
@@ -334,6 +340,43 @@ export function buildWorld(id: string): BuiltWorld {
     box(0xe7c78f, 23, 0.8, 4, 3, 1.6, 1.2);
     occupy(23, 4, 3.8, 3.6, 3.2);
   } else if (id === 'ocean') {
+    // An empty toy boat tips against a soft toy reef when the siren sings.
+    const sirenBoat = new THREE.Group();
+    sirenBoat.name = 'siren-toy-boat';
+    sirenBoat.position.set(12.5, 0.15, 0);
+    const boatPart = (
+      color: number,
+      x: number,
+      y: number,
+      z: number,
+      w: number,
+      h: number,
+      d: number,
+    ) => {
+      const part = new THREE.Mesh(
+        new RoundedBoxGeometry(w, h, d, 1, Math.min(w, h, d) * 0.12),
+        new THREE.MeshStandardMaterial({ color, roughness: 0.75 }),
+      );
+      part.position.set(x, y, z);
+      part.castShadow = true;
+      part.receiveShadow = true;
+      sirenBoat.add(part);
+    };
+    boatPart(0xcb9572, 0, 0.45, 0, 1.8, 0.8, 3);
+    boatPart(0xf1d6a1, 0, 0.89, 0, 1.95, 0.12, 3.05);
+    boatPart(0x9bbeb9, 0, 0.98, 0, 1.5, 0.1, 2.65);
+    boatPart(0xb48865, 0, 1.9, 0, 0.12, 2.2, 0.12);
+    boatPart(0xf2e5bd, 0.45, 2.05, 0, 0.85, 1.4, 0.07);
+    boatPart(0x93b7ca, -0.3, 1.9, 0, 0.5, 1.05, 0.07);
+    boatPart(0xe8ac9a, 0.22, 2.95, 0, 0.5, 0.24, 0.08);
+    group.add(sirenBoat);
+    group.userData.sirenBoat = sirenBoat;
+    for (const [x, z, size] of [
+      [10.2, -2.7, 0.65],
+      [9.7, -1.7, 0.8],
+      [11.1, -2.6, 0.5],
+    ])
+      rock(0xb2d3c5, x, 0.2, z, size, 0.45, size);
     // Atlantis columns, broken archways and mosaic plaza.
     box(0xbad9cb, -17, 0.14, -35, 11, 0.28, 7);
     for (const x of [-21, -17, -13]) {
@@ -370,17 +413,79 @@ export function buildWorld(id: string): BuiltWorld {
       occupy(18 + s * 3, -36, 1.8, 4.5, 1.5);
     }
   } else if (id === 'underground') {
-    for (const x of [-23, -12, 13, 24]) {
-      rock(0x656d88, x, 3.6, -36, 3, 5, 3);
-      cone(0xa09bb4, x, 1.1, -34, 2, 3);
-      occupy(x, -36, 3, 8.6, 2.5);
+    const { floorTiles, wallTiles } = buildCaveFloorplan();
+    // An open-top cutaway: the pale connected floor is navigable; stacked rock defines its edges.
+    for (const tile of floorTiles) {
+      box(tile.color, tile.x, 0.025, tile.z, 2.03, 0.05, 2.03);
+      if (Math.abs(tile.x * 7 + tile.z * 11) % 10 === 0) {
+        box(0xd7d4db, tile.x + 0.3, 0.058, tile.z - 0.2, 0.26, 0.025, 0.12, 0.3);
+        rock(0xc1c8d0, tile.x - 0.4, 0.08, tile.z + 0.35, 0.12, 0.07, 0.2);
+      }
     }
-    box(0x656d88, -17.5, 7.2, -36, 14, 2.5, 5);
-    box(0x4b5874, -17.5, 3.4, -38, 7, 5.5, 0.3);
-    crystal(18, -35, 0xa8cbd2, 1.8);
-    occupy(18, -35, 1.4, 2.8, 1.05);
-    mushroom(-13, -16, 1.7);
-    mushroom(-16, -13, 1.1);
+    for (const wall of wallTiles) {
+      box(0x737991, wall.x, wall.height / 2, wall.z, 2.04, wall.height, 2.04);
+      stamp('box', 0x979bb0, [wall.x, wall.height - 0.1, wall.z], [2.1, 0.28, 2.1]);
+      stamp('box', 0x626b86, [wall.x, 0.38, wall.z], [2.12, 0.32, 2.12]);
+      obstacles.push({ ...wall });
+    }
+    for (const arch of CAVE_LAYOUT.arches) {
+      const color = arch.secret ? 0xaaa0c2 : 0xa4acc3;
+      stamp('arch', color, [arch.x, 2.15, arch.z], [arch.width / 2 + 0.25, 2.05, 0.8], arch.yaw);
+      for (const side of [-1, 1]) {
+        const offset = side * (arch.width / 2 + 0.25);
+        const x = arch.x + Math.cos(arch.yaw) * offset;
+        const z = arch.z - Math.sin(arch.yaw) * offset;
+        box(color, x, 1.1, z, 0.65, 2.2, 0.65, arch.yaw);
+        occupy(x, z, 0.48, 4.45, 0.48);
+        stamp('rounded', arch.secret ? 0xd2b9eb : 0xe9dcaa, [x, 1.5, z], [0.3, 0.4, 0.3], 0, true);
+      }
+    }
+    // Inlaid breadcrumbs follow every bend. The hidden branch has sparse violet stones.
+    for (const tunnel of CAVE_LAYOUT.tunnels) {
+      for (let i = 1; i < tunnel.points.length; i++) {
+        const [ax, az] = tunnel.points[i - 1],
+          [bx, bz] = tunnel.points[i];
+        const length = Math.hypot(bx - ax, bz - az);
+        for (let d = 1; d < length; d += tunnel.secret ? 3.4 : 2.4) {
+          const x = ax + ((bx - ax) * d) / length,
+            z = az + ((bz - az) * d) / length;
+          // Keep the rescue cage's floor clear of a misleading path through its bars.
+          if (Math.hypot(x + 7, z + 9) < 3.1) continue;
+          stamp(
+            'rounded',
+            tunnel.secret ? 0xc9b4e0 : 0xe4dab5,
+            [x, 0.075, z],
+            [tunnel.secret ? 0.22 : 0.48, 0.08, tunnel.secret ? 0.22 : 0.65],
+            Math.atan2(bx - ax, bz - az),
+            true,
+          );
+        }
+      }
+    }
+    for (const [x, z, size] of [
+      [-24, 0, 1.25],
+      [-19, 3.2, 1.1],
+      [-23, -6, 1.4],
+      [-22, 1.5, 0.7],
+    ])
+      mushroom(x, z, size);
+    for (const [x, z, size] of [
+      [22, -3, 1.4],
+      [22, -9, 1.15],
+      [16, -10.5, 0.9],
+      [3, -24, 1.1],
+      [-25, 20.6, 1.8],
+      [-28, 18.5, 1.05],
+      [-22, 18.5, 1.05],
+    ]) {
+      crystal(x, z, z > 10 ? 0xcdb3ed : 0xa4dce0, size);
+      occupy(x, z, 0.7 * size, 1.5 * size, 0.55 * size);
+    }
+    stamp('cylinder', 0xddd0e6, [-25, 0.065, 17], [4.2, 0.05, 4.2]);
+    for (const exit of CAVE_LAYOUT.exits) {
+      // Pale mint rings make a return to the surface easy to recognize from each passage.
+      stamp('cylinder', 0xd5e2bd, [exit.x, 0.07, exit.z], [5.4, 0.07, 5.4]);
+    }
   } else if (id === 'rifts') {
     for (const s of [-1, 1]) {
       box(0x686481, s * 16, 3, -35, 1.6, 6, 1.6);
@@ -428,6 +533,7 @@ export function buildWorld(id: string): BuiltWorld {
   // Footprints prevent a tree canopy or rock cluster from being placed inside a landmark.
   // All high scenery clears full cage/portal/NPC footprints and the complete walking routes.
   for (let i = 0; i < 95; i++) {
+    if (id === 'underground') break; // Its room dressing is authored against the cave map.
     const x = (random() - 0.5) * 76,
       z = (random() - 0.5) * 74;
     const scale = 0.8 + random() * 0.6;
@@ -442,8 +548,7 @@ export function buildWorld(id: string): BuiltWorld {
     } else if (id === 'ocean') {
       coral(x, z, [0xd898a9, 0xd9bf85, 0x9aa3d2][i % 3]);
       occupy(x, z, 1, 1.6, 0.65);
-    } else if (id === 'underground' && i % 2) mushroom(x, z, scale);
-    else if (id === 'rifts' || id === 'underground') {
+    } else if (id === 'rifts') {
       crystal(x, z, i % 2 ? 0x9dd8cd : 0xc5a1d5, scale);
       occupy(x, z, scale, 1.5 * scale, 0.7 * scale);
     } else {
@@ -454,6 +559,7 @@ export function buildWorld(id: string): BuiltWorld {
   // Low planting islands supply texture and color variation without extra movement barriers.
   const patch = new THREE.Color(p.ground).lerp(new THREE.Color(p.leaf), 0.22).getHex();
   for (let i = 0; i < 100; i++) {
+    if (id === 'underground') break;
     const x = (random() - 0.5) * 75,
       z = (random() - 0.5) * 75;
     if (!clear(x, z, 1.1)) continue;
@@ -469,6 +575,7 @@ export function buildWorld(id: string): BuiltWorld {
   for (let i = 0; i < 440; i++) {
     const x = (random() - 0.5) * 77,
       z = (random() - 0.5) * 76;
+    if (id === 'underground' && !isCaveWalkable(x, z, 1)) continue;
     if (!clear(x, z, 0.3)) continue;
     const variant = i % 4;
     if (id === 'meadow' || id === 'savannah' || id === 'city') {
@@ -505,6 +612,7 @@ export function buildWorld(id: string): BuiltWorld {
     rock: new THREE.IcosahedronGeometry(1, 0),
     cone: new THREE.ConeGeometry(0.5, 1, 5),
     cylinder: new THREE.CylinderGeometry(0.5, 0.5, 1, 24),
+    arch: new THREE.TorusGeometry(1, 0.12, 6, 12, Math.PI),
   };
   for (const bucket of buckets.values()) {
     const mat = new THREE.MeshStandardMaterial({

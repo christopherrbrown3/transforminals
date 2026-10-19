@@ -49,6 +49,25 @@ describe('save migration and recovery', () => {
     expect(migrated.settings).toEqual({ muted: true, volume: 1, reducedMotion: true });
   });
 
+  it('upgrades v0.2 progress to schema 3 and retains optional discoveries separately', () => {
+    const old = {
+      version: 2,
+      form: 'fox',
+      rescued: ['fox'],
+      defeated: ['flushington'],
+      discovered: ['meadow', 'underground'],
+      portals: ['meadow', 'underground'],
+      location: { biome: 'underground', x: 17, z: -5 },
+      settings: { muted: true, volume: 0.2, reducedMotion: true },
+    };
+    const migrated = migrateSave(old);
+    expect(migrated).toEqual({ ...old, version: SAVE_VERSION, secrets: [] });
+    expect(
+      migrateSave({ ...migrated, secrets: ['crystal-nook', 'crystal-nook', 'unknown'] }).secrets,
+    ).toEqual(['crystal-nook']);
+    expect(migrated.rescued).toEqual(['fox']);
+  });
+
   it('clamps settings and uses safe defaults for invalid location and setting values', () => {
     const migrated = migrateSave({
       version: SAVE_VERSION,
