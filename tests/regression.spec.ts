@@ -91,6 +91,22 @@ async function release(page: Page, control: ReturnType<Page['locator']>, type = 
   });
 }
 
+async function expectDriftDown(page: Page, releaseHeight: number) {
+  let highest = releaseHeight;
+  // Releasing while rising still carries upward momentum. Observe the turn and
+  // a real fall from the highest sampled position, including an already landed swimmer.
+  await expect
+    .poll(
+      async () => {
+        const player = (await snapshot(page)).player;
+        highest = Math.max(highest, player.y);
+        return player.y < highest - 0.2 && (player.vy < 0 || player.y <= 0.15);
+      },
+      { timeout: testTimeout },
+    )
+    .toBe(true);
+}
+
 test('recovers safely from lava and the world edge without losing rescues', async ({ page }) => {
   test.setTimeout(testTimeout);
   await start(page);
@@ -148,12 +164,10 @@ test('supports powered flight and underwater swimming with the visible star cont
     .toBeGreaterThan(1);
   const oceanRescues = (await snapshot(page)).rescued;
   await page.waitForTimeout(2_800);
-  const oceanPeak = (await snapshot(page)).player.y;
-  expect(oceanPeak).toBeLessThan(10);
+  const oceanReleaseHeight = (await snapshot(page)).player.y;
+  expect(oceanReleaseHeight).toBeLessThan(10);
   await release(page, star);
-  await expect
-    .poll(async () => (await snapshot(page)).player.y, { timeout: 7_000 })
-    .toBeLessThan(oceanPeak);
+  await expectDriftDown(page, oceanReleaseHeight);
   expect((await snapshot(page)).rescued).toEqual(oceanRescues);
 
   await api(page, { type: 'travel', biome: 'beach' });
@@ -164,12 +178,10 @@ test('supports powered flight and underwater swimming with the visible star cont
     .poll(async () => (await snapshot(page)).player.y, { timeout: 5_000 })
     .toBeGreaterThan(1);
   await page.waitForTimeout(1_600);
-  const beachPeak = (await snapshot(page)).player.y;
-  expect(beachPeak).toBeLessThan(10);
+  const beachReleaseHeight = (await snapshot(page)).player.y;
+  expect(beachReleaseHeight).toBeLessThan(10);
   await release(page, star);
-  await expect
-    .poll(async () => (await snapshot(page)).player.y, { timeout: 7_000 })
-    .toBeLessThan(beachPeak);
+  await expectDriftDown(page, beachReleaseHeight);
   expect((await snapshot(page)).rescued).toEqual(oceanRescues);
 });
 
