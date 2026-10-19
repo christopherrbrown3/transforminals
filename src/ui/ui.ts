@@ -30,7 +30,7 @@ export class UI {
     root.innerHTML = `<canvas id="world" aria-label="Transforminals 3D adventure"></canvas>
  <div id="hud" hidden>
  <header class="topbar"><div class="location"><span class="location-mark">${icon('paw', 22)}</span><div><strong id="biome-name">Clover Meadow</strong></div></div><div class="top-actions"><div class="progress-pill">${icon('paw', 20)}<strong id="rescue-count">0 / ${CREATURES.length}</strong><span>rescued</span></div><button id="map-button" class="icon-button" aria-label="World map">${icon('map')}</button><button id="pause-button" class="icon-button" aria-label="Pause and settings">${icon('pause')}</button></div></header>
- <aside class="forms-bar" aria-label="Your transformations"><div id="forms"></div><button id="collection-button" class="collection-button" aria-label="Animal collection">${icon('paw')}<span>Friends</span></button></aside>
+ <aside class="forms-bar" aria-label="Your transformations"><div id="forms" data-scroll-surface></div><button id="collection-button" class="collection-button" aria-label="Animal collection">${icon('paw')}<span>Friends</span></button></aside>
  <div id="boss-hud" hidden><strong id="boss-name"></strong><div id="boss-hearts"></div><span id="boss-hits"></span></div>
  <div id="dialogue" hidden role="status"></div><div id="toast" hidden role="status"></div>
 
@@ -196,7 +196,7 @@ export class UI {
     this.hideDialogue();
     this.el('toast').hidden = true;
     this.actions.pause(true);
-    this.panel.innerHTML = `<section class="panel" role="dialog" aria-modal="true" aria-label="${title}"><div class="panel-heading"><h2>${title}</h2><button id="close-panel" class="icon-button" aria-label="Close">${icon('close')}</button></div>${content}</section>`;
+    this.panel.innerHTML = `<section class="panel" data-scroll-surface role="dialog" aria-modal="true" aria-label="${title}"><div class="panel-heading"><h2>${title}</h2><button id="close-panel" class="icon-button" aria-label="Close">${icon('close')}</button></div>${content}</section>`;
     this.panel.hidden = false;
     this.el('close-panel').onclick = () => this.close();
     this.el('close-panel').focus();

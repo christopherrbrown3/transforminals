@@ -169,6 +169,7 @@ button:active,
   align-items: center;
   width: 80px;
   gap: 12px;
+  min-height: 0;
 }
 .form-button {
   width: 68px;
@@ -213,11 +214,19 @@ button:active,
   display: flex;
   flex-direction: column;
   align-items: center;
+  flex: 1 1 0;
   gap: 12px;
   overflow-y: auto;
+  min-height: 0;
   padding: 5px 6px;
   scrollbar-width: none;
   width: 90px;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+#forms button {
+  touch-action: pan-y;
 }
 .collection-button {
   background: var(--green);
@@ -518,8 +527,14 @@ button:active,
   padding: 28px 32px;
   border-radius: 24px;
   width: min(830px, 96vw);
+  max-height: 92vh;
   max-height: 92dvh;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  min-height: 0;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
   box-shadow: 0 20px 80px #1e3f3440;
 }
 .panel-heading {
@@ -527,6 +542,9 @@ button:active,
   align-items: center;
   justify-content: space-between;
   gap: 20px;
+}
+.panel button {
+  touch-action: pan-y;
 }
 .panel-heading h2 {
   font-weight: 500;
@@ -992,12 +1010,4 @@ body.dark-biome .location {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
-}
-
-/* Scrollable menus own vertical gestures; the play controls retain the game gesture lock. */
-#forms,
-#forms button,
-.panel,
-.panel button {
-  touch-action: pan-y;
 }
