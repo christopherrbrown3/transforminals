@@ -171,7 +171,7 @@ export class Game {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.03;
     this.renderer.shadowMap.enabled = !this.softwareTest;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.scene.add(new THREE.HemisphereLight(0xe4f3ff, 0x59744d, 1.65));
     this.sun.position.set(-18, 32, 18);
     this.sun.castShadow = true;
