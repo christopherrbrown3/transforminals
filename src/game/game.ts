@@ -97,7 +97,12 @@ export class Game {
   private celebration: THREE.Group | null = null;
   private celebrationTime = 0;
   private lastSafe = { x: 0, z: 7 };
-  private focusLabels: Array<{ tag: THREE.Sprite; anchor: THREE.Group; range: number }> = [];
+  private focusLabels: Array<{
+    tag: THREE.Sprite;
+    anchor: THREE.Group;
+    range: number;
+    screenTop?: number;
+  }> = [];
   private maxPixelRatio = 2;
   private softwareTest = false;
   private sun = new THREE.DirectionalLight(0xfff3da, 2.6);
@@ -598,7 +603,7 @@ export class Game {
       const tag = label(getBiome(destination).name, '#fff5dc', 9, true);
       tag.position.y = 5.5;
       group.add(tag);
-      this.focusLabels.push({ tag, anchor: group, range: 25 });
+      this.focusLabels.push({ tag, anchor: group, range: 25, screenTop: 0.82 });
       this.region.add(group);
       this.portals.push({ group, x, z, destination });
     }
@@ -1154,7 +1159,7 @@ export class Game {
         d < candidate.range &&
         d < distance &&
         Math.abs(projected.x) < 0.72 &&
-        projected.y < 0.65 &&
+        projected.y < (candidate.screenTop ?? 0.65) &&
         projected.y > -0.55 &&
         projected.z < 1
       ) {

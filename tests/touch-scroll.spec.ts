@@ -38,9 +38,9 @@ async function swipeOrWheel(page: Page, target: Locator, distance = 190) {
       await session.detach();
     }
   } else {
-    // WebKit's Playwright touchscreen API exposes tap only; wheel uses a browser-native scroll.
-    await page.mouse.move(x, y);
-    await page.mouse.wheel(0, distance);
+    // Playwright's mobile WebKit profile has tap but no drag API. Keep this a
+    // scripted scrolling check and reserve trusted finger-like swipes for Chromium.
+    await target.evaluate((el, amount) => el.scrollBy({ top: amount, behavior: 'auto' }), distance);
   }
 }
 

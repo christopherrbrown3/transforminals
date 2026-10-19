@@ -130,11 +130,11 @@ export function label(text: string, color = '#fff5dc', width = 5, prominent = fa
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
   const sprite = new THREE.Sprite(
-    new THREE.SpriteMaterial({ map: tex, depthTest: true, depthWrite: false }),
+    new THREE.SpriteMaterial({ map: tex, depthTest: !prominent, depthWrite: false }),
   );
   sprite.scale.set(width, (width * canvas.height) / canvas.width, 1);
   sprite.userData.text = text;
-  sprite.renderOrder = 1;
+  sprite.renderOrder = prominent ? 2 : 1;
   return sprite;
 }
 export function disposeObject(root: THREE.Object3D) {

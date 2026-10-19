@@ -54,12 +54,9 @@ test('releases region resources across three complete world circuits', async ({ 
   });
 });
 
-test('keeps the rescued fox playable when the optional Blender model cannot load', async ({
-  page,
-}) => {
+test('rescues, transforms, and moves with the authored fox', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
-  await page.route('**/models/fox.glb', (route) => route.abort());
   await start(page);
   await page.evaluate(() => window.__game?.teleport(-7, -9));
   await activate(page, '#star-button');

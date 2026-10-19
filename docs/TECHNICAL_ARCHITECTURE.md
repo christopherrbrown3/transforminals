@@ -12,7 +12,7 @@ The target is a static Vite application written in TypeScript, rendered with Thr
 
 The game module is intentionally still the central gameplay orchestrator; the other modules own reusable data, persistence, rendering helpers, or UI. Future extraction should follow a tested gameplay need rather than adding abstraction with no current owner.
 
-The required rescue registry in `data.ts` is the single source for rescue totals and the final-boss gate. Optional NPCs and ambient spawns never count toward it. Regions are bounded authored scenes; current implementation uses lightweight meshes, shared geometry/materials and instancing for repeated details, local GLB assets, and disposal when regions change. Movement and collision are arcade-style; a physics engine is not used.
+The required rescue registry in `data.ts` is the single source for rescue totals and the final-boss gate. Optional NPCs and ambient spawns never count toward it. Regions are bounded authored scenes; current implementation uses lightweight meshes, shared geometry/materials and instancing for repeated details, locally authored models, and disposal when regions change. Movement and collision are arcade-style; a physics engine is not used.
 
 ## Input and state
 
@@ -47,3 +47,9 @@ The HUD keeps the region, rescue total, transformations, and controls at the edg
 `caves.ts` owns room centers, tunnel widths/bends, the floor/wall plan, and the optional discovery zone. `world.ts` builds an open-top cutaway from that plan, while legacy-position normalization and traversal checks use the same layout. Actual collider reachability is tested separately from the authored graph. Saved discoveries use schema 3 and remain distinct from required rescues. Outside-floor landings return to safe cave ground so a flying form cannot strand a later human transformation.
 
 The audio manager starts on a player gesture, routes tones and ambience through one smoothed master gain, and disconnects completed audio nodes. `soundscapes.ts` holds original local motifs. Missing or suspended audio never blocks play. Scene cleanup disposes instanced object buffers in addition to deduplicated geometries, materials, and textures; particle expiration and explicit clearing follow the same ownership rule. Bounded renderer-count checks supplement disposal-event tests and do not establish sustained device memory or frame rate.
+
+## v0.4 player feedback pass
+
+All playable creatures now use the procedural authored model path consistently, including the fox. The original Blender fox source/export remains bundled and documented as an archived asset; it no longer overrides the current fox at runtime. Bosses turn their local -Z front toward the camera during normal play, preserving the separate defeat spin. City east-side buildings sit beyond the falcon approach, and an actual-geometry ray test covers that sight line at five distances.
+
+Portal labels use tightly fitted, higher-resolution canvases and a 25-unit focus range. The single-label rule and screen-edge bounds remain. Rings use smoother geometry and a rotating inner arc; travel adds disposable expanding arrival rings without delaying player controls. Reduced motion uses a short stationary fade. Menu scrollers own native vertical touch gestures, with flex sizing, momentum scrolling and contained overscroll; movement/star controls retain pointer capture and the game gesture lock. Physical installed-iOS scrolling remains a device check.
