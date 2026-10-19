@@ -47,20 +47,32 @@ Placement reserves the full canopy or prop footprint separately from its collisi
 
 The polish pass checked grid reachability from the start to all six cage locations and all three portals in every region, including the locked city arena, and checked collider separation from cage/portal/NPC envelopes. All locations passed. Worlds use 15–29 instanced batches plus their ground meshes and roughly 7,000–28,000 triangles before gameplay actors. Physical iPad performance still requires device testing.
 
-| Region      | Signature landmark and dressing                              |
-| ----------- | ------------------------------------------------------------ |
-| Meadow      | giant storybook tree, flower patches, little fence           |
-| Winter      | layered snowy evergreens, ice pond, igloo, snow figures      |
-| Savannah    | wide acacias, watering hole, ocher rock outcrop              |
-| Desert      | stepped ruin, standing arch, cactus clusters, oasis          |
-| Beach       | palm trees, surf edge, jetty, sandcastle                     |
-| Ocean       | Atlantis columns and pediment, toy shipwreck, coral and kelp |
-| Volcano     | conical volcano, peach lava channel, bridge, basalt spires   |
-| Underground | cave entrance, mint mushrooms, tall crystal clusters         |
-| Rifts       | hovering rock islands, magic crystal ring, violet pillars    |
-| City        | pastel buildings, street markings, central plaza             |
+| Region      | Signature landmark and dressing                                                    |
+| ----------- | ---------------------------------------------------------------------------------- |
+| Meadow      | giant storybook tree, flower patches, little fence                                 |
+| Winter      | layered snowy evergreens, ice pond, igloo, snow figures                            |
+| Savannah    | wide acacias, watering hole, ocher rock outcrop                                    |
+| Desert      | stepped ruin, standing arch, cactus clusters, oasis                                |
+| Beach       | palm trees, surf edge, jetty, sandcastle                                           |
+| Ocean       | Atlantis columns, toy shipwreck, siren toy-boat reef bump, coral and kelp          |
+| Volcano     | conical volcano, peach lava channel, bridge, basalt spires                         |
+| Underground | connected cutaway chambers, arched passages, mushroom parlour, hidden crystal nook |
+| Rifts       | hovering rock islands, magic crystal ring, violet pillars                          |
+| City        | pastel buildings, street markings, central plaza                                   |
 
 `world.hazards` describes the volcanic channel away from the bridge; game logic owns friendly recovery. Environmental modules do not create cages, bosses, NPCs, or portals.
+
+## Underground exploration
+
+`src/game/caves.ts` is the shared authored map: nine named rooms and nine connected tunnel polylines define the navigable floor. The Lantern Foyer opens onto the bat rescue chamber and Crystal Conservatory; Echo Crossing connects the three surface passages. A narrower, winding violet-stone trail behind Mushroom Parlour leads to the optional Humming Crystal Nook. Room colors and restrained luminous breadcrumbs distinguish the routes without a compulsory tutorial.
+
+The cave is an open-top toy cutaway. Rounded, layered rock walls stand 2.8–3.16 units high, with circular collision footprints covering their corners. Thin arch frames mark tunnel transitions; they have no chamber roofs or hanging slabs. Main passages are 6–6.5 units wide, and the hidden branch is 5.4 units wide. These leave room for the human to navigate around the closed bat cage. Mushrooms and crystals are hand-placed within chambers, preserving NPC space and each exit approach. Unused rescue pads and the other regions' straight crossing paths are omitted.
+
+`CAVE_LAYOUT` exposes rooms, tunnels, arches, exits, and the optional secret's discovery radius. `buildCaveFloorplan()` derives floor tiles and solid wall colliders from that same data. `isCaveWalkable()` describes the geometric floor envelope; `nearestCaveWalkable()` preserves valid coordinates or finds the nearest floor-tile center clear of the layout walls, allowing gameplay to relocate old saved positions. Ordinary scenery collisions remain the game controller's responsibility.
+
+A static 0.5-unit walking-grid audit included all actual world colliders and the closed cage: all room centers, three portal centers, three NPC origins, and the secret center were reachable from the start; the cage was approachable within 3 units. Closed rock areas stayed inaccessible. A further 1,681 legacy-position samples relocated to wall-clear floor. The cave environment uses 33 draw calls and approximately 45,170 triangles before gameplay actors. TypeScript and scoped ESLint passed; coordinating native camera captures at three viewports now show the player, paths and cage clearly, with no page errors. Physical-device checks remain pending.
+
+The Ocean's seven-part, passenger-free toy sailboat is exposed as `world.group.userData.sirenBoat`. Gameplay owns its original-music cue and harmless reef bump, splash, tip, and recovery animation. Its separate group has no collision obstacle, and each mesh owns disposable geometry and material.
 
 ## Interface and icon direction
 

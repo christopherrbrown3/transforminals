@@ -18,7 +18,7 @@ Jumping onto a wide, low cage rescues its animal. The rescue is idempotent and p
 
 ## World
 
-The planned connected regions are Meadow, Winter, Savannah, Desert, Beach, Ocean/Atlantis, Lava, Underground, Nether-inspired dimension, and City. Each needs a distinct palette, landmarks, approachable routes, rescue content, and local wildlife. Ocean movement permits easy vertical swimming without drowning. The Nether-inspired portal and return route are visible and original. City exploration is possible before the finale; only the final arena is gated by all required rescues.
+The connected regions are Meadow, Winter, Savannah, Desert, Beach, Ocean/Atlantis, Lava, Underground, Nether-inspired dimension, and City. Each needs a distinct palette, landmarks, approachable routes, rescue content, and local wildlife. Ocean movement permits easy vertical swimming without drowning. The Nether-inspired portal and return route are visible and original. City exploration is possible before the finale; only the final arena is gated by all required rescues.
 
 ## Creatures and character content
 
@@ -28,7 +28,7 @@ Wildlife NPCs wander, react, and provide authored contextual hints. The optional
 
 ## Bosses and ending
 
-Plan for five or six bosses total, including a friendly baby giant-lizard mini-boss, an original comedic toilet monster with a flush-and-spin defeat, two or three biome mini-bosses, and the final demon lizard. Bosses use readable slow patterns and cannot kill the player. The final arena stays locked until all required cages are rescued. Five forgiving head stomps defeat the final boss; three hearts communicate health at clear milestones. The short, skippable finale uses harmless colorful effects, rescued animals, “THANK YOU!”, and a fanfare. The boss is completed only once, and exploration continues afterward.
+Six original encounters are configured: Sproutzilla (a friendly baby giant lizard), Sir Slush-a-lot, The Sand Witch, Admiral Flushington (a comedic toilet monster with a flush-and-spin defeat), the Lava Lump, and the final Demon Lizard. Bosses use readable slow patterns and cannot kill the player. The final arena stays locked until all required cages are rescued. Five forgiving head stomps defeat the final boss; three hearts communicate health at clear milestones. The short, skippable finale uses harmless colorful effects, rescued animals, “THANK YOU!”, and a fanfare. The boss is completed only once, and exploration continues afterward.
 
 ## Tone, accessibility, and sound
 
@@ -37,3 +37,7 @@ Use colorful, blocky, toy-like original art, expressive silhouettes, playful eff
 ## Exploration gates — October 18 revision
 
 The user requested fewer repeated returns while walking forward. The far gate now favors an undiscovered biome, cycling through the registry until every region has been visited. One side gate returns to the place just left; the other offers a shortcut. All three destinations differ, and after the world is discovered the forward gate still avoids an immediate return. The map retains explicit revisits and Return to Meadow.
+
+## Underground discoveries — October 19 revision
+
+Twinkle Caverns is a cutaway network of named chambers and connecting passages. Pale inlaid stones guide the main paths; sparse violet crystals lead beyond the mushroom room to the Humming Crystal Nook. Discovering the nook is optional, saves locally, and never changes the 22-rescue requirement. Three surface rings and the map offer exits. Older saves move out of newly solid rock; flying forms that land beyond the walkable cave return to the last safe path. Jazzy Finn’s original song also triggers an empty toy boat’s comic reef bump, splash, and recovery in Ocean.
