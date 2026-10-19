@@ -2,8 +2,11 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests/pwa',
+  outputDir: 'test-results/pwa',
   fullyParallel: false,
-  reporter: process.env.CI ? 'github' : 'list',
+  reporter: process.env.CI
+    ? [['github'], ['html', { open: 'never', outputFolder: 'playwright-report/pwa' }]]
+    : 'list',
   use: {
     ...devices['Desktop Chrome'],
     baseURL: 'http://127.0.0.1:4173',
