@@ -26,9 +26,6 @@ type TestGame = {
   teleport: (x: number, z: number) => void;
   travel: (id: string) => void;
   rescueAll: () => void;
-  setBossHits: (hits: number) => void;
-  setPlayer: (player: { x: number; y: number; z: number; vy: number }) => void;
-  save: () => void;
   queueUpdate: () => void;
 };
 
@@ -46,8 +43,7 @@ type HookAction =
   | { type: 'recoverySetup' }
   | { type: 'unlockAndTravel'; biome: string }
   | { type: 'travel'; biome: string }
-  | { type: 'teleport'; x: number; z: number }
-  | { type: 'finishBossHit' };
+  | { type: 'teleport'; x: number; z: number };
 
 async function api(page: Page, action: HookAction) {
   await page.evaluate((command) => {
@@ -62,12 +58,6 @@ async function api(page: Page, action: HookAction) {
       game.travel(command.biome);
     } else if (command.type === 'travel') game.travel(command.biome);
     else if (command.type === 'teleport') game.teleport(command.x, command.z);
-    else if (command.type === 'finishBossHit') {
-      const boss = game.snapshot().boss;
-      if (!boss) throw new Error('Expected an active boss');
-      game.setBossHits(boss.total - 1);
-      game.setPlayer({ x: 0, y: boss.height + 0.4, z: -19, vy: -2 });
-    }
   }, action);
 }
 
@@ -184,7 +174,7 @@ test('supports powered flight and underwater swimming with the visible star cont
 });
 
 test('uses the same head-stomp win flow for the other four mini-bosses', async ({ page }) => {
-  test.setTimeout(process.env.CI ? 90_000 : 60_000);
+  test.setTimeout(process.env.CI ? 120_000 : 90_000);
   await start(page);
   const bosses = [
     ['meadow', 'sproutzilla'],
@@ -206,13 +196,13 @@ test('uses the same head-stomp win flow for the other four mini-bosses', async (
     await expect
       .poll(async () => (await snapshot(page)).boss?.hits ?? 0, { timeout: 6_000 })
       .toBeGreaterThan(0);
-    let current = await snapshot(page);
-    if (!current.defeated.includes(id)) {
-      await api(page, { type: 'finishBossHit' });
-      await expect
-        .poll(async () => (await snapshot(page)).defeated.includes(id), { timeout: 6_000 })
-        .toBe(true);
-    }
+    // Stay on the head: each successful stomp provides the next forgiving bounce.
+    await expect
+      .poll(async () => (await snapshot(page)).defeated.includes(id), {
+        timeout: process.env.CI ? 20_000 : 12_000,
+      })
+      .toBe(true);
+    expect((await snapshot(page)).boss?.hits).toBe(3);
     await expect(page.locator('#skip-button')).toBeVisible();
     await activate(page, page.locator('#skip-button'));
     await expect.poll(async () => (await snapshot(page)).boss).toBeNull();
