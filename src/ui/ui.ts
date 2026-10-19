@@ -148,6 +148,11 @@ export class UI {
     window.clearTimeout(this.dialogueTimer);
     this.el('dialogue').hidden = true;
   }
+  clearMessages() {
+    this.hideDialogue();
+    window.clearTimeout(this.messageTimer);
+    this.el('toast').hidden = true;
+  }
   arrival(name: string) {
     this.toast(name);
   }

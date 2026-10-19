@@ -277,6 +277,8 @@ test('discovers a world through its ring, then returns from the map', async ({ p
   await expect(page.locator(`[data-travel="${discovered}"]`)).toBeEnabled();
   await activate(page, page.locator('#home-button'));
   await expect.poll(async () => (await snapshot(page)).biome).toBe('meadow');
+  // Revisited regions must not retain the just-discovered region's arrival notice.
+  expect(await page.locator('#toast').isVisible()).toBe(false);
 });
 
 test('defers a visible update through a boss introduction and saves before activation', async ({

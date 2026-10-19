@@ -61,3 +61,11 @@ Native visual captures were reviewed at 1440×900 (Chromium), 1194×834 and 844�
 PR/main CI, live update/save/offline checks and release publication remain pending in this entry. Physical iPad install, touch feel, listening review and sustained hardware performance remain under #13.
 
 The first v0.3 [PR CI run 39218045251](https://github.com/christopherrbrown3/transforminals/actions/runs/39218045251) passed 28 unit and 50 of 52 browser cases. The two failures exposed a test helper that forced the next stomp while the boss cooldown was still active. Its traces confirmed no subsequent hit after the player fell to the ground. The new test observes all three natural bounces instead; both revised browser cases pass locally (54.9 seconds). The final full PR/main checks remain required before release.
+
+### Initial v0.3 deployment and final notice cleanup
+
+[PR #32](https://github.com/christopherrbrown3/transforminals/pull/32) merged as `618bba688071ff148e1e56a50d874603dc700558`. The green [PR run](https://github.com/christopherrbrown3/transforminals/actions/runs/39219581495) and initial [main/Pages run](https://github.com/christopherrbrown3/transforminals/actions/runs/39220628624) passed all 28 unit, 52 gameplay, and two offline cases, with zero flaky/skipped cases. The initial public v0.3 bundle matched the local build and all checked shell/manifest/model/icon endpoints returned HTTP 200.
+
+A held public WebKit v0.2 session upgraded only after explicit activation, retained the fox rescue/form, saved the new cave discovery, reloaded offline with the model/discovery intact, and returned from the Rift in human form offline. No page errors or external hosts were observed. Evidence: `output/playwright/live-v02-to-v03-update.json` and the initial live asset check.
+
+That return screenshot exposed a stale arrival caption from the previous region during rapid travel. Region loading now clears both notification timers/slots before announcing a new discovery. The existing map-return regression now asserts immediate removal; both browser projects pass this focused check, and typecheck/lint/build/all 28 unit cases still pass. This small cleanup is gated by a final main/Pages run before creating the release tag.

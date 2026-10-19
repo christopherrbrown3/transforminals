@@ -477,7 +477,7 @@ export class Game {
     this.encounter = null;
     this.gate = null;
     this.ui.hideBoss();
-    this.ui.hideDialogue();
+    this.ui.clearMessages();
     this.timeline = null;
     this.ui.endCutscene();
     document.body.classList.toggle(
