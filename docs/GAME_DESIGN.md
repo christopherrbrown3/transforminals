@@ -41,3 +41,7 @@ The user requested fewer repeated returns while walking forward. The far gate no
 ## Underground discoveries — October 19 revision
 
 Twinkle Caverns is a cutaway network of named chambers and connecting passages. Pale inlaid stones guide the main paths; sparse violet crystals lead beyond the mushroom room to the Humming Crystal Nook. Discovering the nook is optional, saves locally, and never changes the 22-rescue requirement. Three surface rings and the map offer exits. Older saves move out of newly solid rock; flying forms that land beyond the walkable cave return to the last safe path. Jazzy Finn’s original song also triggers an empty toy boat’s comic reef bump, splash, and recovery in Ocean.
+
+## Player feedback — v0.4
+
+Bosses keep their faces toward the view outside defeat animations. The City falcon approach remains open and visible. Portal destinations appear earlier in one readable scene label; a gentle arrival ripple marks travel without blocking movement, with a subdued reduced-motion version. Native vertical scrolling belongs to the transformation list and dialogs so swiping the collection does not select an animal or move the player.
