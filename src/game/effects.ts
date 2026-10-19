@@ -50,6 +50,7 @@ export class Effects {
     this.bursts = this.bursts.filter((b) => {
       if (b.life < b.duration) return true;
       this.scene.remove(b.mesh);
+      b.mesh.dispose();
       b.mesh.geometry.dispose();
       (b.mesh.material as THREE.Material).dispose();
       return false;
@@ -58,6 +59,7 @@ export class Effects {
   clear() {
     for (const b of this.bursts) {
       this.scene.remove(b.mesh);
+      b.mesh.dispose();
       b.mesh.geometry.dispose();
       (b.mesh.material as THREE.Material).dispose();
     }
@@ -92,6 +94,7 @@ export function disposeObject(root: THREE.Object3D) {
     materials = new Set<THREE.Material>(),
     textures = new Set<THREE.Texture>();
   root.traverse((o) => {
+    if (o instanceof THREE.InstancedMesh) o.dispose();
     const mesh = o as THREE.Mesh;
     if (mesh.geometry) geometries.add(mesh.geometry);
     if (mesh.material) {
