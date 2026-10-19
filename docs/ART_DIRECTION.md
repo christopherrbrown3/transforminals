@@ -47,18 +47,18 @@ Placement reserves the full canopy or prop footprint separately from its collisi
 
 The polish pass checked grid reachability from the start to all six cage locations and all three portals in every region, including the locked city arena, and checked collider separation from cage/portal/NPC envelopes. All locations passed. Worlds use 15–29 instanced batches plus their ground meshes and roughly 7,000–28,000 triangles before gameplay actors. Physical iPad performance still requires device testing.
 
-| Region      | Signature landmark and dressing                                                    |
-| ----------- | ---------------------------------------------------------------------------------- |
-| Meadow      | giant storybook tree, flower patches, little fence                                 |
-| Winter      | layered snowy evergreens, ice pond, igloo, snow figures                            |
-| Savannah    | wide acacias, watering hole, ocher rock outcrop                                    |
-| Desert      | stepped ruin, standing arch, cactus clusters, oasis                                |
-| Beach       | palm trees, surf edge, jetty, sandcastle                                           |
-| Ocean       | Atlantis columns, toy shipwreck, siren toy-boat reef bump, coral and kelp          |
-| Volcano     | conical volcano, peach lava channel, bridge, basalt spires                         |
-| Underground | connected cutaway chambers, arched passages, mushroom parlour, hidden crystal nook |
-| Rifts       | hovering rock islands, magic crystal ring, violet pillars                          |
-| City        | pastel buildings, street markings, central plaza                                   |
+| Region      | Signature landmark and dressing                                                                            |
+| ----------- | ---------------------------------------------------------------------------------------------------------- |
+| Meadow      | giant storybook tree, flower patches, little fence                                                         |
+| Winter      | layered snowy evergreens, ice pond, igloo, snow figures                                                    |
+| Savannah    | wide acacias, watering hole, ocher rock outcrop                                                            |
+| Desert      | stepped ruin, standing arch, cactus clusters, oasis                                                        |
+| Beach       | turquoise bay, wet-sand/foam shore, offshore water, palms, parasols, jetty, sandcastle, shells and bubbles |
+| Ocean       | Atlantis columns, toy shipwreck, siren toy-boat reef bump, coral and kelp                                  |
+| Volcano     | conical volcano, peach lava channel, bridge, basalt spires                                                 |
+| Underground | connected cutaway chambers, arched passages, mushroom parlour, hidden crystal nook                         |
+| Rifts       | hovering rock islands, magic crystal ring, violet pillars                                                  |
+| City        | pastel buildings, street markings, central plaza                                                           |
 
 `world.hazards` describes the volcanic channel away from the bridge; game logic owns friendly recovery. Environmental modules do not create cages, bosses, NPCs, or portals.
 
@@ -91,3 +91,7 @@ Aquatic silhouettes differ in depth, length, head width and fin profiles: the pi
 Animated rigs vary stride, weight, wing rhythm, tail movement and tentacle motion. Compatible static siblings use per-vertex color batching, preserving authored colors and moving pivots while reducing draw calls. Cage fitting reserves idle-motion space. All player, cage, wildlife and ending instances use the same current model builders, including the fox; the earlier Blender export remains an archived asset.
 
 Portal rings use smoother circular geometry and an animated inner arc. One tightly fitted destination label appears farther away and renders above scenery so buildings cannot cut through its text. Arrival ripples dissipate without blocking movement; gentle motion uses a stationary brief fade. The City's east façades are staged beyond the falcon approach.
+
+## v0.5 atlas
+
+The world map is a cream field-guide atlas over patterned pale water. Original miniature SVG landscapes give each region a recognizable toy landmark. Place names, required rescue counts and visit status sit beside the illustration; the current place has a green paw flag and outline. Unvisited places keep readable counts and show a discovery hint. Small landscape screens use the same native vertical scrolling as other dialogs.

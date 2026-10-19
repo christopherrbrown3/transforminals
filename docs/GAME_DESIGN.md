@@ -45,3 +45,9 @@ Twinkle Caverns is a cutaway network of named chambers and connecting passages. 
 ## Player feedback — v0.4
 
 Bosses keep their faces toward the view outside defeat animations. The City falcon approach remains open and visible. Portal destinations appear earlier in one readable scene label; a gentle arrival ripple marks travel without blocking movement, with a subdued reduced-motion version. Native vertical scrolling belongs to the transformation list and dialogs so swiping the collection does not select an animal or move the player.
+
+## World map and Bubble Bay — October 19 revision
+
+The Map button opens an illustrated atlas of all ten regions. A “You are here” marker identifies the actual current region, and every region shows its remaining required rescues, including places not yet visited. Completed regions show “All friends rescued.” Only discovered regions permit fast travel; glowing rings still introduce new places. Return to Meadow remains available. The map pauses play, scrolls vertically on smaller screens and restores focus to its opener.
+
+Bubble Bay keeps its name and becomes a distinctly coastal toy landscape: turquoise shallow water, wet sand, surf, offshore water, palms, beach furniture, shells and floating bubbles. Its shoreline matches the existing swimming boundary at X = -20. Bubbles use gentle movement, with a stable pose under reduced motion. Rescues, routes, wildlife and the harmless Flushington encounter retain their authored clearances.

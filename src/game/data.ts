@@ -293,14 +293,14 @@ export const BIOMES: Biome[] = [
   {
     id: 'beach',
     name: 'Bubble Bay',
-    subtitle: 'Please excuse the dancing toilet.',
+    subtitle: 'Bubbles, beaches, and a royal flush.',
     color: '#e8d89e',
     hint: 'Rescue the turtle, then take the Atlantis ring.',
     npc: 'Shelly',
     dialogue: [
       'No drowning here. Even socks can swim.',
       'Admiral Flushington is blocking my sandcastle view.',
-      'Atlantis has the best bubbles.',
+      'The bay is bubbling! Follow the foam to try swimming.',
     ],
   },
   {

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { createCreature, createBoss, animateCreature, fitCagedCreature } from './creatures';
 import { buildWorld, type BuiltWorld } from './world';
+import { animateBeach, BEACH_WATER_EDGE } from './beach';
 import {
   BOSSES,
   CAGE_POSITIONS,
@@ -267,6 +268,8 @@ export class Game {
     else this.input.delete(key);
   }
   private key(event: KeyboardEvent, down: boolean) {
+    // Let menus use native button activation and scrolling while gameplay is paused.
+    if (!this.ui.el('panel').hidden && event.code !== 'Escape') return;
     if (event.target instanceof HTMLInputElement) return;
     const keys: Record<string, string> = {
       KeyW: 'forward',
@@ -320,7 +323,8 @@ export class Game {
   private jump() {
     if (this.jumpCooldown > 0) return;
     const creature = getCreature(this.form);
-    const swimming = this.biome === 'ocean' || (this.biome === 'beach' && this.player.x < -20);
+    const swimming =
+      this.biome === 'ocean' || (this.biome === 'beach' && this.player.x < BEACH_WATER_EDGE);
     if (this.player.y < 0.15 || creature.kind === 'fly' || swimming) {
       const nearBoss =
         this.encounter?.active &&
@@ -858,7 +862,8 @@ export class Game {
       }
     }
     const previousY = this.player.y;
-    const water = this.biome === 'ocean' || (this.biome === 'beach' && this.player.x < -20);
+    const water =
+      this.biome === 'ocean' || (this.biome === 'beach' && this.player.x < BEACH_WATER_EDGE);
     const flying = c.kind === 'fly' && this.starHeld;
     if ((water || flying) && this.starHeld) {
       this.player.vy = Math.min(this.player.vy + dt * 16, 5);
@@ -1013,6 +1018,8 @@ export class Game {
     }
   }
   private animateWorld(dt: number) {
+    if (this.biome === 'beach')
+      animateBeach(this.world.group, this.elapsed, this.saves.data.settings.reducedMotion);
     const previousSirenTime = this.sirenTime;
     this.sirenTime = Math.max(0, this.sirenTime - dt);
     const boat = this.world.group.userData.sirenBoat as THREE.Group | undefined;

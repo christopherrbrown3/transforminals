@@ -13,7 +13,9 @@ export default defineConfig({
     : 'list',
   use: {
     baseURL: 'http://127.0.0.1:5173',
-    trace: 'retain-on-failure',
+    // Continuous canvas readbacks stall SwiftShader and distort the game simulation timing.
+    trace: { mode: 'retain-on-failure', screenshots: false },
+    screenshot: 'only-on-failure',
   },
   projects: [
     {

@@ -320,6 +320,7 @@ test('shows a nearby wildlife reaction when the player jumps beside it', async (
 test('defeats Flushington with reusable head stomps and keeps beach exploration safe', async ({
   page,
 }) => {
+  test.setTimeout(process.env.CI ? 60_000 : 45_000);
   await startGame(page);
   await page.evaluate(() => window.__game!.travel('beach'));
   await expect.poll(async () => (await snapshot(page)).biome).toBe('beach');
@@ -327,8 +328,9 @@ test('defeats Flushington with reusable head stomps and keeps beach exploration 
   await expect
     .poll(async () => (await snapshot(page)).boss?.id, { timeout: 6_000 })
     .toBe('flushington');
-  await expect.poll(async () => (await snapshot(page)).state).toBe('cutscene');
-  await activate(page, page.locator('#skip-button'));
+  await expect(page.locator('#boss-hearts .full')).toHaveCount(3);
+  // The introduction can finish while a software renderer compiles the new coast.
+  await expect.poll(async () => (await snapshot(page)).state, { timeout: 15_000 }).toBe('playing');
 
   await activate(page, page.locator('#star-button'));
   await expect
@@ -340,19 +342,15 @@ test('defeats Flushington with reusable head stomps and keeps beach exploration 
       { timeout: 6_000 },
     )
     .toBe(true);
-  for (let hits = (await snapshot(page)).boss?.hits ?? 3; hits < 3; hits += 1) {
-    await page.waitForTimeout(650);
-    await page.evaluate(() => window.__game!.setPlayer({ x: 0, y: 4, z: -19, vy: -2 }));
-    await expect
-      .poll(async () => (await snapshot(page)).boss?.hits, { timeout: 4_000 })
-      .toBe(hits + 1);
-  }
-
-  await expect.poll(async () => (await snapshot(page)).state).toBe('cutscene');
+  // Each real stomp supplies the next forgiving bounce; no forced descent is needed.
+  await expect
+    .poll(async () => (await snapshot(page)).defeated.includes('flushington'), {
+      timeout: process.env.CI ? 20_000 : 12_000,
+    })
+    .toBe(true);
+  await expect(page.locator('#boss-hearts .empty')).toHaveCount(3);
   await expect(page.locator('#cutscene-text')).toContainText('FLUUUSH!');
-  await activate(page, page.locator('#skip-button'));
-  await expect.poll(async () => (await snapshot(page)).defeated.includes('flushington')).toBe(true);
-  await expect.poll(async () => (await snapshot(page)).boss).toBeNull();
+  await expect.poll(async () => (await snapshot(page)).boss, { timeout: 15_000 }).toBeNull();
   await page.evaluate(() => window.__game!.travel('meadow'));
   await expect.poll(async () => (await snapshot(page)).biome).toBe('meadow');
   expect((await snapshot(page)).state).toBe('playing');
