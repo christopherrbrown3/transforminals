@@ -34,7 +34,7 @@ export function canTransform(save: SaveData, id: string) {
   return id === 'human' || save.rescued.includes(id);
 }
 export function bossHearts(hits: number, total = 5) {
-  return Math.max(0, 3 - Math.floor((Math.max(0, Math.min(hits, total)) * 3) / total));
+  return Math.max(0, total - Math.max(0, Math.floor(hits)));
 }
 export function headStompEligible(
   player: { x: number; y: number; z: number; vy: number },

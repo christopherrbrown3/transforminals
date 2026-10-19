@@ -6,7 +6,7 @@
 
 ## The adventure
 
-Version 0.4 connects ten compact environments: Clover Meadow, Snowcone Valley, Sunbeam Savannah, Wobble Dunes, Bubble Bay, Atlantis, Popcorn Peaks, Twinkle Caverns, the Giggle Rift, and Big Little City. There are 22 required animal rescues and transformations, wandering wildlife, six original bosses, local autosaves, original synthesized music, and a skippable thank-you party. The final arena opens after every required rescue; five head boops defeat the Demon Lizard while three hearts show its remaining health. Exploration continues afterward.
+Version 0.4.1 connects ten compact environments: Clover Meadow, Snowcone Valley, Sunbeam Savannah, Wobble Dunes, Bubble Bay, Atlantis, Popcorn Peaks, Twinkle Caverns, the Giggle Rift, and Big Little City. There are 22 required animal rescues and transformations, wandering wildlife, six original bosses, local autosaves, original synthesized music, and a skippable thank-you party. The final arena opens after every required rescue; five head boops defeat the Demon Lizard with five visible hearts, one lost per hit. Exploration continues afterward.
 
 The v0.4 pass gives all 22 animals more distinct anatomy, faces, markings and movement. Bosses face the view, City rescue approaches are clearer, portal destinations appear earlier, and an arrival ripple marks travel. Native scroll areas support the transformation list and menus. Installed-iOS scrolling still needs physical-device confirmation.
 

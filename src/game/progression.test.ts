@@ -44,10 +44,14 @@ describe('rescue progression', () => {
     expect(canEnterFinal([...ids, 'optional-wildlife'])).toBe(true);
   });
 
-  it('shows the three boss hearts changing across five stomps', () => {
-    expect([0, 1, 2, 3, 4, 5].map((hits) => bossHearts(hits))).toEqual([3, 3, 2, 2, 1, 0]);
-    expect(bossHearts(-4)).toBe(3);
+  it('shows five final-boss hearts, losing one per head stomp', () => {
+    expect([0, 1, 2, 3, 4, 5].map((hits) => bossHearts(hits))).toEqual([5, 4, 3, 2, 1, 0]);
+    expect(bossHearts(-4)).toBe(5);
     expect(bossHearts(99)).toBe(0);
+  });
+
+  it('keeps three-hit mini-bosses at three hearts', () => {
+    expect([0, 1, 2, 3].map((hits) => bossHearts(hits, 3))).toEqual([3, 2, 1, 0]);
   });
 
   it('accepts a forgiving cage landing only while descending through its top', () => {

@@ -24,6 +24,7 @@ type GameSnapshot = {
 
 declare global {
   interface Window {
+    __bossHeartHistory?: Array<{ hits: number; full: number; empty: number; slots: number }>;
     __game?: {
       snapshot: () => GameSnapshot;
       teleport: (x: number, z: number) => void;
@@ -448,19 +449,42 @@ test('keeps the finale gated, then defeats the unlocked boss with five head stom
   const skip = page.locator('#skip-button');
   await expect(skip).toBeVisible();
   await activate(page, skip);
-  await expect(page.locator('#boss-hearts .full')).toHaveCount(3);
+  await expect(page.locator('#boss-hearts > span')).toHaveCount(5);
+  await expect(page.locator('#boss-hearts .full')).toHaveCount(5);
+  await expect(page.locator('#boss-hearts > span').last()).toBeVisible();
 
-  // The first head hit must come from the visible jump button, not test positioning.
+  // Observe each DOM update in the same browser task as its hit. Automatic bounces
+  // can advance before a separate cross-process assertion reads the previous count.
+  await page.evaluate(() => {
+    const hearts = document.querySelector('#boss-hearts')!;
+    const history: NonNullable<Window['__bossHeartHistory']> = [];
+    window.__bossHeartHistory = history;
+    const record = () => {
+      const boss = window.__game!.snapshot().boss;
+      if (!boss || history.at(-1)?.hits === boss.hits) return;
+      history.push({
+        hits: boss.hits,
+        full: hearts.querySelectorAll('.full').length,
+        empty: hearts.querySelectorAll('.empty').length,
+        slots: hearts.children.length,
+      });
+      if (boss.hits === 5) observer.disconnect();
+    };
+    const observer = new MutationObserver(record);
+    record();
+    observer.observe(hearts, { childList: true });
+  });
+
+  // One visible jump starts the five actual head hits and their forgiving auto-bounces.
   await activate(page, page.locator('#star-button'));
-  await expect.poll(async () => (await snapshot(page)).boss?.hits, { timeout: 6_000 }).toBe(1);
-  await expect(page.locator('#boss-hearts .full')).toHaveCount(3);
-
-  for (let hits = 2; hits <= 5; hits += 1) {
-    await page.waitForTimeout(650);
-    await page.evaluate(() => window.__game!.setPlayer({ x: 0, y: 8, z: -19, vy: -2 }));
-    await expect.poll(async () => (await snapshot(page)).boss?.hits, { timeout: 4_000 }).toBe(hits);
-    await expect(page.locator('#boss-hearts .full')).toHaveCount([3, 3, 2, 2, 1, 0][hits]);
-  }
+  await expect
+    .poll(async () => (await snapshot(page)).defeated.includes('demon-lizard'), {
+      timeout: process.env.CI ? 30_000 : 20_000,
+    })
+    .toBe(true);
+  expect(await page.evaluate(() => window.__bossHeartHistory)).toEqual(
+    Array.from({ length: 6 }, (_, hits) => ({ hits, full: 5 - hits, empty: hits, slots: 5 })),
+  );
 
   await expect.poll(async () => (await snapshot(page)).state).toBe('cutscene');
   await expect(page.locator('#skip-button')).toBeVisible();

@@ -28,7 +28,7 @@ Wildlife NPCs wander, react, and provide authored contextual hints. The optional
 
 ## Bosses and ending
 
-Six original encounters are configured: Sproutzilla (a friendly baby giant lizard), Sir Slush-a-lot, The Sand Witch, Admiral Flushington (a comedic toilet monster with a flush-and-spin defeat), the Lava Lump, and the final Demon Lizard. Bosses use readable slow patterns and cannot kill the player. The final arena stays locked until all required cages are rescued. Five forgiving head stomps defeat the final boss; three hearts communicate health at clear milestones. The short, skippable finale uses harmless colorful effects, rescued animals, “THANK YOU!”, and a fanfare. The boss is completed only once, and exploration continues afterward.
+Six original encounters are configured: Sproutzilla (a friendly baby giant lizard), Sir Slush-a-lot, The Sand Witch, Admiral Flushington (a comedic toilet monster with a flush-and-spin defeat), the Lava Lump, and the final Demon Lizard. Bosses use readable slow patterns and cannot kill the player. The final arena stays locked until all required cages are rescued. Five forgiving head stomps defeat the final boss; five visible hearts each represent one remaining hit (revised by the user on October 19). The short, skippable finale uses harmless colorful effects, rescued animals, “THANK YOU!”, and a fanfare. The boss is completed only once, and exploration continues afterward.
 
 ## Tone, accessibility, and sound
 
