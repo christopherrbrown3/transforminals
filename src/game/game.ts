@@ -1,7 +1,13 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { createCreature, createBoss, animateCreature, batchCreatureMeshes } from './creatures';
+import {
+  createCreature,
+  createBoss,
+  animateCreature,
+  batchCreatureMeshes,
+  fitCagedCreature,
+} from './creatures';
 import { buildWorld, type BuiltWorld } from './world';
 import {
   BOSSES,
@@ -527,12 +533,7 @@ export class Game {
     pad.position.y = 1.501;
     bars.add(pad);
     const animal = createCreature(id);
-    const bounds = new THREE.Box3().setFromObject(animal);
-    const size = bounds.getSize(new THREE.Vector3());
-    const center = bounds.getCenter(new THREE.Vector3());
-    const scale = Math.min(0.6, 1.05 / size.y, 2.6 / size.x, 2.6 / size.z);
-    animal.scale.setScalar(scale);
-    animal.position.set(-center.x * scale, 0.2 - bounds.min.y * scale, -center.z * scale);
+    fitCagedCreature(animal);
     group.add(animal);
     const tag = label(`${getCreature(id).name} · jump`, '#fff5dc', 5.2);
     tag.position.y = 3;

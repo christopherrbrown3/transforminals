@@ -528,3 +528,13 @@ export function animateCreature(group: THREE.Group, time: number, moving: boolea
   if (rig.tail) rig.tail.rotation.y = Math.sin(time * (moving ? 9 : 3)) * 0.21;
   if (rig.head) rig.head.rotation.z = Math.sin(time * 2) * 0.035;
 }
+
+/** Fit the measured model, including its intrinsic species scale, below a cage roof. */
+export function fitCagedCreature(animal: THREE.Group): void {
+  const bounds = new THREE.Box3().setFromObject(animal);
+  const size = bounds.getSize(new THREE.Vector3());
+  const center = bounds.getCenter(new THREE.Vector3());
+  const scale = Math.min(0.6, 1.05 / size.y, 2.6 / size.x, 2.6 / size.z);
+  animal.scale.multiplyScalar(scale);
+  animal.position.set(-center.x * scale, 0.2 - bounds.min.y * scale, -center.z * scale);
+}
