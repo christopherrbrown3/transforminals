@@ -3,6 +3,24 @@ import * as THREE from 'three';
 import { disposeObject, Effects } from './effects';
 
 describe('scene resource cleanup', () => {
+  it.each(['expire', 'clear'] as const)('releases portal rings on %s exactly once', (cleanup) => {
+    const scene = new THREE.Scene();
+    const effects = new Effects(scene);
+    effects.portal(new THREE.Vector3(), '#ffd36d');
+    const group = scene.children[0] as THREE.Group;
+    const geometry = (group.children[0] as THREE.Mesh).geometry;
+    const disposed = vi.fn();
+    geometry.addEventListener('dispose', disposed);
+    expect(effects.portalActive).toBe(true);
+    if (cleanup === 'expire') effects.tick(1);
+    else effects.clear();
+    effects.clear();
+    effects.tick(1);
+    expect(effects.portalActive).toBe(false);
+    expect(scene.children).toHaveLength(0);
+    expect(disposed).toHaveBeenCalledTimes(1);
+  });
+
   it('releases instance buffers and deduplicates shared geometry, material, and texture disposal', () => {
     const texture = new THREE.Texture();
     const geometry = new THREE.BoxGeometry();

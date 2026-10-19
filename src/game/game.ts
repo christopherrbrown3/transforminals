@@ -1,13 +1,6 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import {
-  createCreature,
-  createBoss,
-  animateCreature,
-  batchCreatureMeshes,
-  fitCagedCreature,
-} from './creatures';
+import { createCreature, createBoss, animateCreature, fitCagedCreature } from './creatures';
 import { buildWorld, type BuiltWorld } from './world';
 import {
   BOSSES,
@@ -110,10 +103,6 @@ export class Game {
   private sun = new THREE.DirectionalLight(0xfff3da, 2.6);
   private qualityTime = 0;
   private qualityFrames = 0;
-  private foxAsset: THREE.Group | null = null;
-  private foxClips: THREE.AnimationClip[] = [];
-  private mixer: THREE.AnimationMixer | null = null;
-  private foxPromise: Promise<void>;
   private shadow: THREE.Mesh;
   private updateReady = false;
   private testUpdateActivations = 0;
@@ -210,18 +199,6 @@ export class Game {
     );
     this.shadow.rotation.x = -Math.PI / 2;
     this.scene.add(this.shadow);
-    this.foxPromise = new GLTFLoader()
-      .loadAsync('/models/fox.glb')
-      .then((gltf) => {
-        this.foxAsset = gltf.scene;
-        this.foxClips = gltf.animations;
-        batchCreatureMeshes(this.foxAsset);
-        this.foxAsset.name = 'CloverFoxBlender';
-        if (this.form === 'fox') this.replaceAvatar();
-      })
-      .catch(() => {
-        /* The procedural fox remains playable if the optional GLB fails. */
-      });
     this.loadBiome('meadow', false);
     this.replaceAvatar();
     this.settings();
@@ -279,7 +256,6 @@ export class Game {
     this.state = 'playing';
     this.snapCamera();
     if (this.saves.warning) this.ui.toast(this.saves.warning);
-    void this.foxPromise;
   }
   move(key: string, down: boolean) {
     if (down && this.state === 'playing') this.input.add(key);
@@ -416,16 +392,9 @@ export class Game {
   private replaceAvatar() {
     const old = this.avatar;
     const rotation = old.rotation.y;
-    if (this.mixer) {
-      this.mixer.stopAllAction();
-      this.mixer.uncacheRoot(old);
-      this.mixer = null;
-    }
     this.scene.remove(old);
-    if (!old.userData.sharedAsset) disposeObject(old);
-    this.avatar =
-      this.form === 'fox' && this.foxAsset ? this.foxAsset.clone(true) : createCreature(this.form);
-    this.avatar.userData.sharedAsset = this.form === 'fox' && !!this.foxAsset;
+    disposeObject(old);
+    this.avatar = createCreature(this.form);
     this.avatar.rotation.y = rotation;
     if (getCreature(this.form).kind === 'giant') this.avatar.scale.setScalar(2);
     this.avatar.traverse((part) => {
@@ -435,10 +404,6 @@ export class Game {
       }
     });
     this.scene.add(this.avatar);
-    if (this.avatar.userData.sharedAsset) {
-      this.mixer = new THREE.AnimationMixer(this.avatar);
-      for (const clip of this.foxClips) this.mixer.clipAction(clip).play();
-    }
   }
   travel(id: BiomeId) {
     if (this.state === 'cutscene') return;
@@ -453,6 +418,7 @@ export class Game {
     this.state = 'playing';
     this.audio.play('portal');
     this.snapCamera();
+    this.effects.portal(new THREE.Vector3(0, 0, 5), getCreature(this.form).color);
     this.persist();
   }
   private loadBiome(id: BiomeId, announce: boolean) {
@@ -606,27 +572,33 @@ export class Game {
       const color =
         destination === 'meadow' ? 0x8dd6a9 : destination === 'rifts' ? 0xc9a5ef : 0xffd387;
       const ring = new THREE.Mesh(
-        new THREE.TorusGeometry(2, 0.28, 6, 24),
+        new THREE.TorusGeometry(2, 0.28, 10, 64),
         new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.28 }),
       );
       ring.position.y = 2.3;
       group.add(ring);
       const veil = new THREE.Mesh(
-        new THREE.CircleGeometry(1.75, 24),
+        new THREE.CircleGeometry(1.75, 48),
         new THREE.MeshBasicMaterial({
           color,
           transparent: true,
-          opacity: 0.24,
+          opacity: 0.35,
           side: THREE.DoubleSide,
           depthWrite: false,
         }),
       );
       veil.position.set(0, 2.3, 0.02);
       group.add(veil);
-      const tag = label(getBiome(destination).name, '#fff5dc', 6);
-      tag.position.y = 5.3;
+      const swirl = new THREE.Mesh(
+        new THREE.TorusGeometry(1.22, 0.055, 5, 48, Math.PI * 1.5),
+        new THREE.MeshBasicMaterial({ color: 0xfff4ce, transparent: true, opacity: 0.75 }),
+      );
+      swirl.position.set(0, 2.3, 0.06);
+      group.add(swirl);
+      const tag = label(getBiome(destination).name, '#fff5dc', 9, true);
+      tag.position.y = 5.5;
       group.add(tag);
-      this.focusLabels.push({ tag, anchor: group, range: 12 });
+      this.focusLabels.push({ tag, anchor: group, range: 25 });
       this.region.add(group);
       this.portals.push({ group, x, z, destination });
     }
@@ -693,7 +665,7 @@ export class Game {
     model.userData.baseScale = size;
     model.userData.headHeight = Number(model.userData.headHeight) * size;
     model.position.set(0, 0, -19);
-    model.rotation.y = 0;
+    model.rotation.y = Math.atan2(-3, -24);
     this.region.add(model);
     model.traverse((part) => {
       if (part instanceof THREE.Mesh) {
@@ -1071,6 +1043,7 @@ export class Game {
     for (const portal of this.portals) {
       const ring = portal.group.children[0];
       ring.rotation.z = Math.sin(this.elapsed * 0.5) * 0.05;
+      if (!this.effects.reduced) portal.group.children[2].rotation.z = this.elapsed * 0.7;
     }
     const enc = this.encounter;
     if (enc) {
@@ -1085,6 +1058,16 @@ export class Game {
           enc.data.id === 'flushington' ? -t * 1.5 : Math.sin(t * Math.PI) * 1.5;
       } else {
         enc.model.position.x = Math.sin(this.elapsed * 0.55) * 0.4;
+        // Models face local -Z. Keep their expression toward the view, including side approaches.
+        const yaw = Math.atan2(
+          enc.model.position.x - this.camera.position.x,
+          enc.model.position.z - this.camera.position.z,
+        );
+        const delta = Math.atan2(
+          Math.sin(yaw - enc.model.rotation.y),
+          Math.cos(yaw - enc.model.rotation.y),
+        );
+        enc.model.rotation.y += delta * Math.min(1, dt * 7);
         enc.model.rotation.z = enc.cooldown > 0 ? Math.sin(enc.cooldown * 20) * 0.12 : 0;
       }
     }
@@ -1206,7 +1189,6 @@ export class Game {
       if (this.timeline.elapsed >= this.timeline.duration) this.skip();
     }
     if (this.state !== 'paused') {
-      this.mixer?.update(dt);
       this.animateWorld(dt);
       this.effects.tick(dt);
       this.updateCamera(dt);
@@ -1263,6 +1245,7 @@ export class Game {
       secrets: [...this.saves.data.secrets],
       audio: this.audio.diagnostics(),
       motionReduced: this.effects.reduced,
+      portalArrival: this.effects.portalActive,
       sirenTime: this.sirenTime,
       sirenBoat: this.world.group.userData.sirenBoat
         ? {
@@ -1279,11 +1262,22 @@ export class Game {
             hits: this.encounter.hits,
             total: this.encounter.data.hits,
             height: Number(this.encounter.model.userData.headHeight),
+            facingCamera: new THREE.Vector3(0, 0, -1)
+              .applyAxisAngle(new THREE.Vector3(0, 1, 0), this.encounter.model.rotation.y)
+              .dot(
+                new THREE.Vector3()
+                  .subVectors(this.camera.position, this.encounter.model.position)
+                  .setY(0)
+                  .normalize(),
+              ),
           }
         : null,
       renderer: {
         pixelRatio: this.renderer.getPixelRatio(),
         visibleLabels: this.focusLabels.filter((item) => item.tag.visible).length,
+        labels: this.focusLabels
+          .filter((item) => item.tag.visible)
+          .map((item) => item.tag.userData.text as string),
         obstacles: this.world.obstacles,
         calls: this.renderer.info.render.calls,
         triangles: this.renderer.info.render.triangles,

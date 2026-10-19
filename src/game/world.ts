@@ -510,7 +510,9 @@ export function buildWorld(id: string): BuiltWorld {
     box(0x7e9094, 27, 0.045, -3, 5.5, 0.07, 55);
     for (const s of [-1, 1])
       for (let i = 0; i < 5; i++) {
-        const x = s * (i % 2 ? 34 : 20),
+        // The east approach must reveal the falcon cage beyond the plaza.
+        // Put its tall façades behind the avenue rather than across the sight line.
+        const x = s * (s === 1 ? (i === 2 ? 32 : 34) : i % 2 ? 34 : 20),
           z = -36 + i * 10,
           h = 4 + random() * 7;
         if (!clear(x, z, 3)) continue;
