@@ -69,7 +69,7 @@ jobs:
       - name: Add custom domain
         run: printf '%s\n' 'transforminals.christopherbrown.ai' > dist/CNAME
       - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: dist
       - id: deployment
