@@ -30,8 +30,10 @@ Check whether a wildcard already provides that mapping before adding a redundant
 
 Verify that the exact main commit passed quality checks and Pages deployment. Fetch live HTML, manifest, icons, service worker, and model assets; inspect the rendered game and a real rescue flow on the public domain. A local build or accepted job alone is not public availability. Test cached navigation and model access offline. Record the commit, run, URL, and result in the development log.
 
-Physical iPad Safari installation, hardware frame rate, memory under a long play session, and real update activation across two published versions remain separate checks. Browser automation cannot establish those results.
+The v0.1-to-v0.2 public update was verified in a held-open WebKit session, including explicit activation, save preservation, and offline startup. Physical iPad Safari installation, hardware frame rate, memory under a long play session, and device-specific update behavior remain separate checks.
 
 ## Rollback
 
 Revert the offending release through the normal Git workflow and let the checked Pages pipeline publish the prior application state. Preserve save compatibility and use the existing versioned migration path. Avoid DNS changes as an application rollback mechanism.
+
+The v0.2 runtime `a37a5d55c52d3d4560737f41b144ce3fe8e648dd` was published by [run 39182479445](https://github.com/christopherrbrown3/transforminals/actions/runs/39182479445) and verified on the public HTTPS domain. See the development log for the cross-release save/offline evidence.

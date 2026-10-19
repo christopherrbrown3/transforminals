@@ -39,3 +39,11 @@ PR/main CI, deployment, and live update/save/offline evidence will be recorded a
 The final review caught cage fitting replacing an intrinsic species scale. Fitting now multiplies that scale, and an additional geometry invariant checks all 22 creature models against the bars/roof bounds. The final local typecheck, lint, build, and all 18 unit tests pass.
 
 A final Chromium touch-gesture check at 844×390 found the inherited game gesture lock prevented scrolling through rescued forms. The selector and scrollable panels now allow vertical gestures while movement controls keep their existing lock. A native browser touch swipe advanced the 23-form list from scrollTop 0 to 129 after the fix (the same gesture previously stayed at 0). This is an emulated Chromium gesture check, not physical iPad testing.
+
+### v0.2 publication evidence
+
+[PR #26](https://github.com/christopherrbrown3/transforminals/pull/26) merged as `dfa6dd842e5de1fd0602c0afa842930dae511124`; the touch-scrolling follow-up is `a37a5d55c52d3d4560737f41b144ce3fe8e648dd`. The final [PR run](https://github.com/christopherrbrown3/transforminals/actions/runs/39181498347) and [main quality/Pages run](https://github.com/christopherrbrown3/transforminals/actions/runs/39182479445) passed TypeScript, ESLint, 18 unit cases, all 26 gameplay cases, both production offline cases, and the production build. Pages published the exact merged runtime.
+
+The public HTTPS origin was verified with a WebKit iPad-like session held open from v0.1. A real star-button fox rescue and fox transformation were saved before release. After v0.2 published, the update prompt appeared while play stayed active with no navigation. The player-selected update reloaded into v0.2, preserved the fox rescue and selected form, and then served both the updated app and bundled fox GLB after an offline reload. No page errors were reported. Local evidence is `output/playwright/live-v01-to-v02-update.json`; the public version/assets were checked separately. This establishes the automated cross-release flow, not physical iPad behavior.
+
+Physical iPad installation, touch feel, sustained frame rate/memory, and device-specific audio/update behavior remain pending under #13. The deeper cave-network work remains under #8.

@@ -29,3 +29,5 @@ All 20 gameplay cases and both offline cases passed locally. The main quality/Pa
 ## v0.2 validation
 
 The graphics/UI pass passed TypeScript, ESLint, 13 existing unit cases, all 24 then-current gameplay cases, and both production offline cases. The final exploration-routing change adds four unit cases and one two-browser gameplay flow (26 gameplay cases in the final suite). Final PR/main CI and live-domain evidence are recorded in the development log after they complete. The mechanical UI detector reported no findings. An earlier concurrent local browser run suffered a test-artifact cleanup collision; the authoritative 24-case run used one worker and passed cleanly.
+
+The final v0.2 [main run](https://github.com/christopherrbrown3/transforminals/actions/runs/39182479445) passed all 18 unit, 26 gameplay, and two offline cases. A held-open public WebKit session also verified the real v0.1-to-v0.2 update: active play continued until the update was selected, the rescued fox/form persisted, and the new version/model loaded offline without page errors. See the development log for runtime and local evidence paths. Physical iPad checks remain pending.
