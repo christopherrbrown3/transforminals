@@ -6,7 +6,7 @@
 
 ## The adventure
 
-Version 0.4.1 connects ten compact environments: Clover Meadow, Snowcone Valley, Sunbeam Savannah, Wobble Dunes, Bubble Bay, Atlantis, Popcorn Peaks, Twinkle Caverns, the Giggle Rift, and Big Little City. There are 22 required animal rescues and transformations, wandering wildlife, six original bosses, local autosaves, original synthesized music, and a skippable thank-you party. The final arena opens after every required rescue; five head boops defeat the Demon Lizard with five visible hearts, one lost per hit. Exploration continues afterward.
+Version 0.5.0 connects ten compact environments: Clover Meadow, Snowcone Valley, Sunbeam Savannah, Wobble Dunes, Bubble Bay, Atlantis, Popcorn Peaks, Twinkle Caverns, the Giggle Rift, and Big Little City. There are 22 required animal rescues and transformations, wandering wildlife, six original bosses, local autosaves, original synthesized music, and a skippable thank-you party. The final arena opens after every required rescue; five head boops defeat the Demon Lizard with five visible hearts, one lost per hit. Exploration continues afterward.
 
 The v0.4 pass gives all 22 animals more distinct anatomy, faces, markings and movement. Bosses face the view, City rescue approaches are clearer, portal destinations appear earlier, and an arrival ripple marks travel. Native scroll areas support the transformation list and menus. Installed-iOS scrolling still needs physical-device confirmation.
 
@@ -17,7 +17,7 @@ Twinkle Caverns has connected chambers, tunnels, three surface exits, and a hidd
 - Use the big arrows on the right to move and the star to jump or use your form's power.
 - Land on a cage roof to rescue its animal. Tap its portrait on the left, or open Friends, to transform.
 - Hold the star to fly or swim upward. Release it to glide or drift down. All forms can explore on land.
-- Walk through a labeled glowing ring to visit another region. The map revisits discovered regions and always offers Return to Meadow.
+- Walk through a labeled glowing ring to visit another region. The Map button opens an illustrated atlas with your current location and the number of friends still waiting in every region. Tap a visited place to return, or choose Return to Meadow.
 - On desktop, use WASD or arrow keys, Space, M for the map, and Escape for pause. H returns to Meadow.
 
 Saves stay in this browser on this device. There is no account or cloud save. Start a new adventure from pause/settings only after confirming the reset.

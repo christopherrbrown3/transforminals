@@ -1,6 +1,7 @@
 import { BIOMES, CREATURES, HUMAN, getCreature, type BiomeId } from '../game/data';
 import type { SaveData } from '../game/progression';
 import { icon, portrait } from './icons';
+import { worldMap } from './worldMap';
 export interface UIActions {
   start(): void;
   move(key: string, down: boolean): void;
@@ -22,6 +23,7 @@ export class UI {
   private returnFocus: HTMLElement | null = null;
   private previousBoss = '';
   private form = 'human';
+  private currentBiome: BiomeId = 'meadow';
   constructor(
     private root: HTMLElement,
     private actions: UIActions,
@@ -29,7 +31,7 @@ export class UI {
   ) {
     root.innerHTML = `<canvas id="world" aria-label="Transforminals 3D adventure"></canvas>
  <div id="hud" hidden>
- <header class="topbar"><div class="location"><span class="location-mark">${icon('paw', 22)}</span><div><strong id="biome-name">Clover Meadow</strong></div></div><div class="top-actions"><div class="progress-pill">${icon('paw', 20)}<strong id="rescue-count">0 / ${CREATURES.length}</strong><span>rescued</span></div><button id="map-button" class="icon-button" aria-label="World map">${icon('map')}</button><button id="pause-button" class="icon-button" aria-label="Pause and settings">${icon('pause')}</button></div></header>
+ <header class="topbar"><div class="location"><span class="location-mark">${icon('paw', 22)}</span><div><strong id="biome-name">Clover Meadow</strong></div></div><div class="top-actions"><div class="progress-pill">${icon('paw', 20)}<strong id="rescue-count">0 / ${CREATURES.length}</strong><span>rescued</span></div><button id="map-button" class="icon-button" aria-label="World map" aria-haspopup="dialog" title="World map (M)">${icon('map')}<span>Map</span></button><button id="pause-button" class="icon-button" aria-label="Pause and settings">${icon('pause')}</button></div></header>
  <aside class="forms-bar" aria-label="Your transformations"><div id="forms" data-scroll-surface></div><button id="collection-button" class="collection-button" aria-label="Animal collection">${icon('paw')}<span>Friends</span></button></aside>
  <div id="boss-hud" hidden><strong id="boss-name"></strong><div id="boss-hearts"></div><span id="boss-hits"></span></div>
  <div id="dialogue" hidden role="status"></div><div id="toast" hidden role="status"></div>
@@ -37,9 +39,26 @@ export class UI {
  <div class="touch-controls"><button id="star-button" aria-label="Jump or use power">${icon('star', 38)}<span id="star-label">JUMP</span></button><div class="dpad" aria-label="Movement controls"><button data-move="forward" class="forward" aria-label="Move forward">${icon('up', 32)}</button><button data-move="left" class="left" aria-label="Move left">${icon('left', 32)}</button><button data-move="backward" class="backward" aria-label="Move backward">${icon('down', 32)}</button><button data-move="right" class="right" aria-label="Move right">${icon('right', 32)}</button><i></i></div></div>
  <button id="update-button" hidden>A fresh adventure update is ready</button><div id="cutscene" hidden><p id="cutscene-text"></p><button id="skip-button">Skip ${icon('right', 18)}</button></div>
  </div>
- <section id="title-screen" class="title-screen"><div class="title-copy"><div class="calvin-badge">${icon('spark', 18)} A wild adventure by Calvin</div><h1>TRANS<span>FORMINALS</span></h1><p class="title-tagline">Little rescues.<br>Enormous possibilities.</p><p class="title-description">Jump on cages. Make new friends.<br>Become anyone you rescue.</p><button id="start-button" class="primary-button">${icon('play', 23)} ${save.rescued.length ? 'Continue adventure' : 'Let’s get wild'}</button><p class="title-note">No lives to lose. Just a whole world to find.</p></div><div class="title-world-label">CLOVER MEADOW <span>your adventure starts here</span></div><span class="version">v0.4.1 · Made for Calvin</span></section>
+ <section id="title-screen" class="title-screen"><div class="title-copy"><div class="calvin-badge">${icon('spark', 18)} A wild adventure by Calvin</div><h1>TRANS<span>FORMINALS</span></h1><p class="title-tagline">Little rescues.<br>Enormous possibilities.</p><p class="title-description">Jump on cages. Make new friends.<br>Become anyone you rescue.</p><button id="start-button" class="primary-button">${icon('play', 23)} ${save.rescued.length ? 'Continue adventure' : 'Let’s get wild'}</button><p class="title-note">No lives to lose. Just a whole world to find.</p></div><div class="title-world-label">CLOVER MEADOW <span>your adventure starts here</span></div><span class="version">v0.5.0 · Made for Calvin</span></section>
  <section id="panel" class="panel-backdrop" hidden></section><div id="loading" hidden>Growing a new corner of the world…</div><div id="rotate-hint">More room for adventure in landscape.</div>`;
     this.panel = this.el('panel');
+    this.panel.addEventListener('keydown', (event) => {
+      if (event.key !== 'Tab') return;
+      const controls = Array.from(
+        this.panel.querySelectorAll<HTMLElement>(
+          'button:not(:disabled), input:not(:disabled), a[href], [tabindex="0"]',
+        ),
+      ).filter((control) => control.getClientRects().length > 0);
+      const first = controls[0];
+      const last = controls.at(-1);
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first?.focus();
+      }
+    });
     this.el('start-button').onclick = () => {
       this.el('title-screen').hidden = true;
       this.el('hud').hidden = false;
@@ -119,6 +138,7 @@ export class UI {
             : 'POWER';
   }
   biome(id: BiomeId) {
+    this.currentBiome = id;
     const b = BIOMES.find((b) => b.id === id)!;
     this.el('biome-name').textContent = b.name;
   }
@@ -202,11 +222,8 @@ export class UI {
     this.el('close-panel').focus();
   }
   map() {
-    this.open(
-      'A whole wild world',
-      `<p class="panel-intro">Walk into the glowing rings to discover places. Revisit them here anytime.</p><div class="map-grid">${BIOMES.map((b, i) => `<button data-travel="${b.id}" ${this.save.discovered.includes(b.id) ? '' : 'disabled'} style="--biome-color:${b.color}"><span class="map-number">${String(i + 1).padStart(2, '0')}</span><strong>${b.name}</strong><small>${this.save.discovered.includes(b.id) ? `${CREATURES.filter((c) => c.biome === b.id && this.save.rescued.includes(c.id)).length}/${CREATURES.filter((c) => c.biome === b.id).length} friends rescued` : 'Find a ring to discover'}</small></button>`).join('')}</div><button id="home-button" class="secondary-button">${icon('home', 20)} Return to Meadow</button>`,
-      this.el('map-button'),
-    );
+    this.open('World map', worldMap(this.save, this.currentBiome), this.el('map-button'));
+    this.panel.querySelector('.panel')!.classList.add('world-map-panel');
     this.root.querySelectorAll<HTMLButtonElement>('[data-travel]').forEach(
       (b) =>
         (b.onclick = () => {
@@ -244,7 +261,7 @@ export class UI {
   settings() {
     this.open(
       'Take a breather',
-      `<p class="panel-intro">Your adventure saves on this device. Come back whenever you like.</p><label class="setting-row">Sound <input id="muted-setting" type="checkbox" ${!this.save.settings.muted ? 'checked' : ''}></label><label class="setting-row">Volume <input id="volume-setting" type="range" min="0" max="1" step="0.05" value="${this.save.settings.volume}"></label><label class="setting-row">Gentle motion <input id="motion-setting" type="checkbox" ${this.save.settings.reducedMotion ? 'checked' : ''}></label><p class="install-note">On iPad: Safari → Share → Add to Home Screen. Open once online to pack your offline adventure.</p><div class="settings-actions"><button id="resume-button" class="primary-button">Keep exploring ${icon('play', 18)}</button><button id="help-button" class="secondary-button">How to play</button><button id="memory-button" class="secondary-button" ${this.save.defeated.includes('demon-lizard') ? '' : 'disabled'}>Replay the thank-you party</button><button id="reset-button" class="text-button">Start a new adventure…</button></div><small class="save-note">v0.4.1 · Local saves · Original creatures & music</small>`,
+      `<p class="panel-intro">Your adventure saves on this device. Come back whenever you like.</p><label class="setting-row">Sound <input id="muted-setting" type="checkbox" ${!this.save.settings.muted ? 'checked' : ''}></label><label class="setting-row">Volume <input id="volume-setting" type="range" min="0" max="1" step="0.05" value="${this.save.settings.volume}"></label><label class="setting-row">Gentle motion <input id="motion-setting" type="checkbox" ${this.save.settings.reducedMotion ? 'checked' : ''}></label><p class="install-note">On iPad: Safari → Share → Add to Home Screen. Open once online to pack your offline adventure.</p><div class="settings-actions"><button id="resume-button" class="primary-button">Keep exploring ${icon('play', 18)}</button><button id="help-button" class="secondary-button">How to play</button><button id="memory-button" class="secondary-button" ${this.save.defeated.includes('demon-lizard') ? '' : 'disabled'}>Replay the thank-you party</button><button id="reset-button" class="text-button">Start a new adventure…</button></div><small class="save-note">v0.5.0 · Local saves · Original creatures & music</small>`,
       this.el('pause-button'),
     );
     this.el('muted-setting').onchange = () => {

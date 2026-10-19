@@ -43,3 +43,7 @@ Minecraft, Pokémon, Godzilla, Mechagodzilla, and Skibidi Toilet names in the or
 ## v0.4 creature studies
 
 `src/game/animalModels.ts` contains original toy sculptures. [Creature references](CREATURE_REFERENCE.md) records the primary zoological sources consulted for anatomy; no source photographs, textures, recordings, or models are copied or bundled. Fantasy characters retain original invented features. `assets/source/creature-land-v04.png` and `creature-water-v04.png` are browser renders of these project models, licensed with the original artwork under MIT. They replace neither the historical Blender study nor its source files.
+
+## v0.5 atlas and coastal art
+
+The ten miniature landscapes in `src/ui/worldMap.ts`, wave-pattern SVG in the stylesheet, and coastal geometry/bubbles in `src/game/beach.ts` are original code-native artwork under the repository's MIT license. The player-supplied issue #35 screenshot was inspected as a general map reference; none of its artwork, logos or assets is copied or bundled. The atlas, beach materials and animations work from the local bundle without image services or remote textures.

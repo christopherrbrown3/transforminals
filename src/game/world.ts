@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { buildCaveFloorplan, CAVE_LAYOUT, isCaveWalkable } from './caves';
+import { buildBeach, BEACH_WATER_EDGE } from './beach';
 
 export interface WorldObstacle {
   x: number;
@@ -31,7 +32,7 @@ const palettes: Record<
   winter: { sky: 0xc6dfec, ground: 0xe6eff1, path: 0xbacfdc, leaf: 0x77aeb4, cliff: 0xa9c5d5 },
   savannah: { sky: 0xf4dfad, ground: 0xc7bf6d, path: 0xe0c493, leaf: 0x929a53, cliff: 0xbba06a },
   desert: { sky: 0xf3d9b0, ground: 0xe4c68d, path: 0xf2dcaa, leaf: 0x74a786, cliff: 0xcaa476 },
-  beach: { sky: 0xbce5e8, ground: 0xf2dca5, path: 0xffecc4, leaf: 0x74ac86, cliff: 0xc9b894 },
+  beach: { sky: 0xbceaf0, ground: 0xf6e6bb, path: 0xfff0ce, leaf: 0x74ac86, cliff: 0xcbbd9c },
   ocean: { sky: 0x528ea4, ground: 0x95c7bb, path: 0xb4d7c5, leaf: 0x78b5ae, cliff: 0x699da6 },
   volcano: { sky: 0xcba6a5, ground: 0x716b7d, path: 0xaaa0a4, leaf: 0x967e87, cliff: 0x59566b },
   underground: { sky: 0x737995, ground: 0x9996ad, path: 0xb5afc3, leaf: 0x9ecbc1, cliff: 0x686c86 },
@@ -161,7 +162,7 @@ export function buildWorld(id: string): BuiltWorld {
     box(p.path, 0, 0.025, -13, 4.5, 0.04, 53);
     box(p.cliff, 0, 0.007, -30, 59, 0.025, 4.4);
     box(p.path, 0, 0.027, -30, 58, 0.04, 3.6);
-    for (const [x, z] of cages.slice(0, 6)) {
+    for (const [x, z] of cages.slice(0, id === 'beach' ? 1 : 6)) {
       box(p.path, x / 2, 0.025, z, Math.abs(x) + 4, 0.045, 2.1);
       stamp('cylinder', p.path, [x, 0.035, z], [5.5, 0.05, 5.5]);
     }
@@ -326,19 +327,7 @@ export function buildWorld(id: string): BuiltWorld {
     }
     box(0xe7c58f, 17, 5, -35, 5.5, 0.8, 1.5);
   } else if (id === 'beach') {
-    box(0x7fc5c6, -29, 0.04, -6, 16, 0.06, 43);
-    box(0xb9e1d7, -20.5, 0.065, -6, 1.5, 0.04, 43);
-    box(0xb9946f, -26, 0.4, -17, 14, 0.3, 3);
-    for (let k = 0; k < 5; k++) box(0xa28061, -31 + k * 2.5, 0.1, -17, 0.4, 1.5, 0.4);
-    tree(13, -36, 1.35);
-    tree(24, -21, 1.2);
-    // Stacked sandcastle towers.
-    for (const s of [-1, 1]) {
-      box(0xd8b77e, 23 + s * 2, 1.3, 4, 1.7, 2.6, 1.7);
-      cone(0xecc994, 23 + s * 2, 3, 4, 2, 1.2);
-    }
-    box(0xe7c78f, 23, 0.8, 4, 3, 1.6, 1.2);
-    occupy(23, 4, 3.8, 3.6, 3.2);
+    buildBeach(group, { clear, occupy });
   } else if (id === 'ocean') {
     // An empty toy boat tips against a soft toy reef when the siren sings.
     const sirenBoat = new THREE.Group();
@@ -535,7 +524,7 @@ export function buildWorld(id: string): BuiltWorld {
   // Footprints prevent a tree canopy or rock cluster from being placed inside a landmark.
   // All high scenery clears full cage/portal/NPC footprints and the complete walking routes.
   for (let i = 0; i < 95; i++) {
-    if (id === 'underground') break; // Its room dressing is authored against the cave map.
+    if (id === 'underground' || id === 'beach') break; // These regions use authored scenery.
     const x = (random() - 0.5) * 76,
       z = (random() - 0.5) * 74;
     const scale = 0.8 + random() * 0.6;
@@ -561,7 +550,7 @@ export function buildWorld(id: string): BuiltWorld {
   // Low planting islands supply texture and color variation without extra movement barriers.
   const patch = new THREE.Color(p.ground).lerp(new THREE.Color(p.leaf), 0.22).getHex();
   for (let i = 0; i < 100; i++) {
-    if (id === 'underground') break;
+    if (id === 'underground' || id === 'beach') break;
     const x = (random() - 0.5) * 75,
       z = (random() - 0.5) * 75;
     if (!clear(x, z, 1.1)) continue;
@@ -578,6 +567,7 @@ export function buildWorld(id: string): BuiltWorld {
     const x = (random() - 0.5) * 77,
       z = (random() - 0.5) * 76;
     if (id === 'underground' && !isCaveWalkable(x, z, 1)) continue;
+    if (id === 'beach' && x < BEACH_WATER_EDGE) continue;
     if (!clear(x, z, 0.3)) continue;
     const variant = i % 4;
     if (id === 'meadow' || id === 'savannah' || id === 'city') {

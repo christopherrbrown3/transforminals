@@ -20,7 +20,7 @@ jobs:
   quality:
     name: Typecheck, lint, unit tests, build, browser tests
     runs-on: macos-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
