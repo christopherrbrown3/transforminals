@@ -95,3 +95,11 @@ Portal rings use smoother circular geometry and an animated inner arc. One tight
 ## v0.5 atlas
 
 The world map is a cream field-guide atlas over patterned pale water. Original miniature SVG landscapes give each region a recognizable toy landmark. Place names, required rescue counts and visit status sit beside the illustration; the current place has a green paw flag and outline. Unvisited places keep readable counts and show a discovery hint. Small landscape screens use the same native vertical scrolling as other dialogs.
+
+## Boss sculptures — October 29
+
+`bossModels.ts` gives each encounter an original toy silhouette: Sproutzilla has a leafy tail, broad muzzle and segmented belly; Sir Slush-a-lot wears mittens and a fringed scarf; the Sand Witch has layered fillings, a plum hat and olive wand; Admiral Flushington has an open seat, naval cap and moustache; Lava Lump has peach seams between basalt plates and popcorn tufts; the Demon Lizard has ribbed wings, a curled tail and small vanilla horns. Large eyes blink, while arms, wings, tails and the scarf move gently. Gentle-motion settings hold these appendages in a stationary pose.
+
+Each boss wears a flat golden landing cap with a cream star. The cap stays level independently of the head tilt, at the existing 2.49-unit mini-boss or 3.39-unit final-boss height; the finale retains its 1.7 runtime scale. Hats and horns leave the central landing footprint clear. On short landscape screens at least 700 pixels wide, the hearts panel moves below the arena during play so it does not cover the final boss's face or star.
+
+The six sculptures use 4,258–7,224 triangles and 8–11 batched meshes each. They have no texture or remote-asset dependencies. The rendered model study is `assets/source/boss-gallery.png`; browser and interaction evidence is recorded in the development log. These counts do not establish physical iPad frame rate.

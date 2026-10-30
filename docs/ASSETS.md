@@ -14,6 +14,8 @@ The following assets were authored specifically for Transforminals. They use the
 | Cave network        | `src/game/caves.ts`                                                                      | bundled JS              | Authored room/tunnel layout, three surface exits, and an optional crystal-nook discovery; human traversal, discovery persistence and safe relocation pass in Chromium/WebKit |
 | Music and ambience  | `src/game/soundscapes.ts`, `src/game/audio.ts`                                           | synthesized at runtime  | Original biome motifs, ambient cues, effects, and Jazzy Finn phrase via Web Audio; no recording files                                                                        |
 
+The six detailed boss sculptures in `src/game/bossModels.ts` and their rendered study at `assets/source/boss-gallery.png` are original project artwork under the repository's MIT license. Their geometry, colors, landing stars and appendage animations are authored in local code; they use no downloaded models, textures or external services.
+
 The fox export contains one scene, no external image/buffer URIs, and no objects from the user's other Blender projects. The saved source file contains only the fox studio scene and its dependencies. The original open Blender project was preserved, and the original active scene was restored after authoring. Other creature and boss models, region geometry, UI icons, and soundscapes are procedural/local source code; the fox GLB is the only bundled authored 3D model file.
 
 ## Fox asset contract

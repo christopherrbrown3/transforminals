@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { buildDetailedAnimal, animateDetailedAnimal, type AnimalRig } from './animalModels';
+import { buildBoss, animateBoss } from './bossModels';
 
 /** All models use feet at Y=0 and look down -Z. No remote textures. */
 const ink = 0x243c3b;
@@ -103,29 +104,6 @@ function block(
   parent.add(mesh);
   return mesh;
 }
-function orb(parent: THREE.Object3D, color: number, size: number[], position: number[]) {
-  const mesh = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 1), material(color));
-  mesh.scale.set(size[0], size[1], size[2]);
-  mesh.position.set(position[0], position[1], position[2]);
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
-  parent.add(mesh);
-  return mesh;
-}
-function cone(
-  parent: THREE.Object3D,
-  color: number,
-  radius: number,
-  height: number,
-  p: number[],
-  sides = 4,
-) {
-  const mesh = new THREE.Mesh(new THREE.ConeGeometry(radius, height, sides), material(color));
-  mesh.position.set(p[0], p[1], p[2]);
-  mesh.castShadow = true;
-  parent.add(mesh);
-  return mesh;
-}
 function eyes(parent: THREE.Object3D, width: number, y: number, z: number, big = false) {
   for (const s of [-1, 1]) {
     block(parent, 0xfff8e8, [big ? 0.29 : 0.2, big ? 0.33 : 0.23, 0.065], [s * width, y, z]);
@@ -186,89 +164,16 @@ export function createCreature(id: string): THREE.Group {
 export function createBoss(id: string): THREE.Group {
   const g = new THREE.Group();
   g.name = `boss:${id}`;
-  const rig: Rig = { legs: [], wings: [] };
-  g.userData.rig = rig;
   g.userData.kind = id;
-  const head = new THREE.Group();
-  head.position.y = id === 'demon-lizard' ? 2.85 : 1.95;
-  g.add(head);
-  rig.head = head;
-  if (id === 'sproutzilla') {
-    block(g, 0x9a7450, [1.05, 1.4, 0.85], [0, 0.8, 0]);
-    orb(head, 0x6fa36a, [1.15, 0.72, 0.85], [0, 0, 0]);
-    for (const s of [-1, 1]) {
-      block(g, 0x9a7450, [0.35, 0.75, 0.4], [s * 0.75, 1, 0], s * -0.4);
-      limb(g, rig, 0x725a43, s * 0.35, 0.45, 0, 0.45, 0.45);
-      cone(head, 0xffd77b, 0.22, 0.4, [s * 0.6, 0.7, 0]);
-    }
-    eyes(head, 0.38, 0.05, -0.77, true);
-  } else if (id === 'frosty') {
-    orb(g, 0xe7f5f3, [1.1, 0.85, 0.85], [0, 0.85, 0]);
-    orb(head, 0xf8ffff, [0.8, 0.68, 0.7], [0, 0, 0]);
-    eyes(head, 0.25, 0.08, -0.66, true);
-    const nose = cone(head, 0xf5a24f, 0.14, 0.6, [0, -0.08, -0.9]);
-    nose.rotation.x = -Math.PI / 2;
-    block(head, 0x53768c, [1.05, 0.15, 0.9], [0, 0.65, 0]);
-    block(head, 0x53768c, [0.65, 0.6, 0.65], [0, 0.98, 0]);
-    block(g, 0xde8b91, [1.4, 0.2, 1.1], [0, 1.4, 0]);
-  } else if (id === 'sandwich') {
-    for (const [y, c, w, h] of [
-      [0.4, 0xe9b66f, 1.8, 0.45],
-      [0.78, 0x92bd61, 2, 0.13],
-      [0.98, 0xe78865, 1.8, 0.23],
-      [1.16, 0xf5d36e, 2, 0.12],
-      [1.43, 0xe9b66f, 1.8, 0.43],
-    ])
-      block(g, c, [w, h, 1.2], [0, y, 0]);
-    block(head, 0xf4d18b, [1.65, 0.5, 1.2], [0, 0, 0]);
-    eyes(head, 0.35, 0.02, -0.63, true);
-    for (const s of [-1, 1]) block(g, 0xa57a50, [0.27, 0.65, 0.3], [s * 1.05, 0.65, 0], s * -0.3);
-  } else if (id === 'flushington') {
-    block(g, 0xe1e9ee, [0.8, 0.8, 0.85], [0, 0.4, 0.25]);
-    orb(g, 0xf8faf3, [1, 0.57, 1.15], [0, 0.92, -0.16]);
-    block(g, 0xc7d5df, [1.4, 1.5, 0.5], [0, 1.3, 0.6]);
-    block(g, 0xfafff6, [1.57, 0.2, 0.65], [0, 2.1, 0.6]);
-    block(head, 0xa1d7a6, [0.9, 0.65, 0.8], [0, -0.1, -0.2]);
-    eyes(head, 0.25, -0.04, -0.63, true);
-    block(g, 0xffd171, [0.35, 0.17, 0.12], [0.52, 1.78, 0.31]);
-  } else if (id === 'lava-lump') {
-    orb(g, 0x805c68, [1.35, 1.2, 1], [0, 1.1, 0]);
-    orb(head, 0x8d6571, [0.92, 0.57, 0.82], [0, 0, -0.1]);
-    eyes(head, 0.31, 0.03, -0.86, true);
-    for (const s of [-1, 1]) {
-      block(g, 0xffba68, [0.16, 1.3, 0.08], [s * 0.43, 1.1, -0.89], s * -0.2);
-      cone(head, 0xffc363, 0.23, 0.55, [s * 0.55, 0.55, 0]);
-    }
-  } else {
-    block(g, 0x9167a7, [1.6, 1.8, 1.05], [0, 1.3, 0.2]);
-    block(g, 0xe4abbb, [0.95, 1.25, 0.1], [0, 1.3, -0.38]);
-    block(head, 0x9167a7, [1.35, 0.8, 1.2], [0, 0, 0]);
-    block(head, 0xb97cbd, [1.4, 0.32, 0.6], [0, -0.25, -0.6]);
-    eyes(head, 0.4, 0.1, -0.63, true);
-    for (const s of [-1, 1]) {
-      cone(head, 0xf6d997, 0.23, 0.65, [s * 0.52, 0.6, 0.1]);
-      limb(g, rig, 0x9167a7, s * 0.55, 0.6, 0.2, 0.6, 0.6);
-      block(g, 0x9167a7, [0.4, 0.9, 0.4], [s * 1.02, 1.5, 0], s * -0.25);
-      const wing = new THREE.Group();
-      wing.position.set(s * 0.7, 2, 0.5);
-      g.add(wing);
-      const w = cone(wing, 0xbf8dc2, 0.9, 0.2, [s * 0.65, 0.1, 0.1], 3);
-      w.rotation.x = Math.PI / 2;
-      rig.wings.push(wing);
-    }
-    const tail = new THREE.Group();
-    tail.position.set(0, 0.7, 0.7);
-    g.add(tail);
-    block(tail, 0x9167a7, [0.5, 0.4, 1.7], [0, 0, 0.7]);
-    rig.tail = tail;
-  }
-  // Every boss has a broad, clear crown to land on.
-  block(head, 0xffd476, [id === 'demon-lizard' ? 1.2 : 0.9, 0.08, 0.8], [0, 0.5, 0]);
-  g.userData.headHeight = head.position.y + 0.54;
+  buildBoss(id, g);
   return batchCreatureMeshes(g);
 }
 
 export function animateCreature(group: THREE.Group, time: number, moving: boolean): void {
+  if (group.userData.bossRig) {
+    animateBoss(group, time);
+    return;
+  }
   const rig = group.userData.rig as Rig | undefined;
   if (!rig) return;
   if (rig.motion) {
