@@ -1060,7 +1060,7 @@ export class Game {
     const enc = this.encounter;
     if (enc) {
       enc.cooldown = Math.max(0, enc.cooldown - dt);
-      animateCreature(enc.model, this.elapsed, false);
+      animateCreature(enc.model, this.effects.reduced ? 0 : this.elapsed, false);
       if (enc.defeating > 0) {
         enc.defeating += dt;
         const t = Math.min(1, enc.defeating / 2.7);

@@ -1030,6 +1030,14 @@ body.dark-biome .location {
     grid-template-columns: repeat(4, 1fr);
   }
 }
+/* Leave the final boss's face and landing star visible on short landscape screens. */
+@media (max-height: 450px) and (min-width: 700px) and (orientation: landscape) {
+  #hud:not(.cinematic) #boss-hud {
+    top: auto;
+    bottom: max(16px, env(safe-area-inset-bottom));
+    left: calc(50% - 70px);
+  }
+}
 @media (orientation: portrait) {
   #rotate-hint {
     display: block;

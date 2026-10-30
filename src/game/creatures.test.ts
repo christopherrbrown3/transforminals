@@ -1,8 +1,8 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { CREATURES } from './data';
+import { BOSSES, CREATURES } from './data';
 import { disposeObject } from './effects';
-import { animateCreature, createCreature, fitCagedCreature } from './creatures';
+import { animateCreature, createBoss, createCreature, fitCagedCreature } from './creatures';
 
 const built: THREE.Group[] = [];
 const triangleBudget = 20_000;
@@ -103,6 +103,57 @@ describe.each(CREATURES)('$name model', (creature) => {
       expect(Math.abs(bounds.max.x), `right side at t=${time}`).toBeLessThanOrEqual(1.35);
       expect(Math.abs(bounds.min.z), `front side at t=${time}`).toBeLessThanOrEqual(1.35);
       expect(Math.abs(bounds.max.z), `back side at t=${time}`).toBeLessThanOrEqual(1.35);
+    }
+  });
+});
+
+describe.each(BOSSES)('$name boss sculpture', (boss) => {
+  it('keeps detailed geometry within the mobile actor budget', () => {
+    const model = createBoss(boss.id);
+    built.push(model);
+    const geometry = geometryStats(model);
+    expect(geometry.errors).toEqual([]);
+    expect(geometry.triangles).toBeLessThan(10_000);
+    let meshes = 0;
+    model.traverse((node) => {
+      if (node instanceof THREE.Mesh) meshes++;
+    });
+    expect(
+      meshes,
+      'batch static details while retaining the expressive joints',
+    ).toBeLessThanOrEqual(12);
+
+    for (const time of [0, 0.37, 1.21, 3.8, 6.4]) {
+      animateCreature(model, time, false);
+      const size = finiteBounds(model);
+      expect(size).not.toBeNull();
+      expect(Math.max(size!.x, size!.y, size!.z)).toBeLessThan(5.5);
+      expect(new THREE.Box3().setFromObject(model).min.y).toBeGreaterThan(-0.02);
+    }
+  });
+
+  it('keeps the visible landing target level and clear at the existing collision height', () => {
+    const model = createBoss(boss.id);
+    built.push(model);
+    const scale = boss.id === 'demon-lizard' ? 1.7 : 1;
+    const height = (boss.id === 'demon-lizard' ? 3.39 : 2.49) * scale;
+    model.scale.setScalar(scale);
+    expect(Number(model.userData.headHeight) * scale).toBeCloseTo(height);
+    const ray = new THREE.Raycaster();
+    for (const time of [0, 0.37, 1.21, 3.8, 6.4]) {
+      animateCreature(model, time, false);
+      model.updateMatrixWorld(true);
+      for (const x of [-0.3, 0, 0.3]) {
+        for (const z of [-0.25, 0, 0.25]) {
+          ray.set(new THREE.Vector3(x * scale, height + 2, z * scale), new THREE.Vector3(0, -1, 0));
+          const landing = ray.intersectObject(model, true)[0];
+          expect(landing, 'the landing footprint must remain solid').toBeDefined();
+          expect(
+            Math.abs(landing.point.y - height),
+            'hats and horns must not hide the landing cap',
+          ).toBeLessThan(0.01);
+        }
+      }
     }
   });
 });
