@@ -89,6 +89,17 @@ test('bosses turn toward the camera when each arena encounter begins', async ({ 
   }
 });
 
+test('reports at most one label even before the first frame after travel', async ({ page }) => {
+  await start(page);
+  // Read state in the same task as the region rebuild, before any frame can select a label.
+  const labels = await page.evaluate(() => {
+    const game = (window as unknown as { __game: TestGame }).__game;
+    game.travel('meadow');
+    return game.snapshot().renderer.labels;
+  });
+  expect(labels.length).toBeLessThanOrEqual(1);
+});
+
 test('shows a side-portal label before entry, walks through, and keeps controls usable on arrival', async ({
   page,
 }) => {
@@ -101,25 +112,32 @@ test('shows a side-portal label before entry, walks through, and keeps controls 
   const before = await snapshot(page);
   expect(Math.hypot(before.player.x - 28, before.player.z + 30)).toBeGreaterThanOrEqual(18);
   expect(Math.hypot(before.player.x - 28, before.player.z + 30)).toBeLessThanOrEqual(24);
+  // Sample destination and count together, so the check reflects a rendered frame's selection.
   await expect
-    .poll(async () =>
-      (await snapshot(page)).renderer.labels.some((label) => biomeLabels.has(label)),
-    )
+    .poll(async () => {
+      const { labels } = (await snapshot(page)).renderer;
+      return labels.length === 1 && biomeLabels.has(labels[0]);
+    })
     .toBe(true);
-  expect((await snapshot(page)).renderer.labels.length).toBeLessThanOrEqual(1);
 
   // Let the arrival cooldown finish, then use the real forward control to enter the ring.
   await page.waitForTimeout(2_200);
   await page.keyboard.down('ArrowUp');
   try {
+    // The arrival ripple lasts under a second. Sample the region change and ripple together
+    // at a short interval, rather than backing off to one check per second during the walk.
     await expect
-      .poll(async () => (await snapshot(page)).biome, { timeout: 12_000 })
-      .not.toBe('meadow');
+      .poll(
+        async () => {
+          const { biome, portalArrival } = await snapshot(page);
+          return biome !== 'meadow' && portalArrival;
+        },
+        { timeout: 12_000, intervals: [50] },
+      )
+      .toBe(true);
   } finally {
     await page.keyboard.up('ArrowUp');
   }
-
-  await expect.poll(async () => (await snapshot(page)).portalArrival).toBe(true);
   const arrived = await snapshot(page);
   await page.keyboard.down('ArrowRight');
   try {
