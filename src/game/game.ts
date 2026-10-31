@@ -542,7 +542,7 @@ export class Game {
     const tag = label(`${getCreature(id).name} · jump`, '#fff5dc', 5.2);
     tag.position.y = 3;
     group.add(tag);
-    this.focusLabels.push({ tag, anchor: group, range: 13 });
+    this.addFocusLabel({ tag, anchor: group, range: 13 });
     const beacon = new THREE.Mesh(
       new THREE.CylinderGeometry(0.08, 0.08, 6, 8),
       new THREE.MeshBasicMaterial({
@@ -624,7 +624,7 @@ export class Game {
       const tag = label(getBiome(destination).name, '#fff5dc', 9, true);
       tag.position.y = 5.5;
       group.add(tag);
-      this.focusLabels.push({ tag, anchor: group, range: 25, screenTop: 0.82 });
+      this.addFocusLabel({ tag, anchor: group, range: 25, screenTop: 0.82 });
       this.region.add(group);
       this.portals.push({ group, x, z, destination });
     }
@@ -680,7 +680,7 @@ export class Game {
       const text = label('Rescue every friend', '#fff3c5', 7);
       text.position.y = 4;
       this.gate.add(text);
-      this.focusLabels.push({ tag: text, anchor: this.gate, range: 13 });
+      this.addFocusLabel({ tag: text, anchor: this.gate, range: 13 });
       this.gate.position.set(0, 0, -18);
       this.region.add(this.gate);
       return;
@@ -1156,6 +1156,11 @@ export class Game {
     }
     this.camera.position.lerp(desired, Math.min(1, dt * 5));
     this.camera.lookAt(target);
+  }
+  /** Labels start hidden, so state read between frames matches the at-most-one rendered label. */
+  private addFocusLabel(entry: (typeof this.focusLabels)[number]) {
+    entry.tag.visible = false;
+    this.focusLabels.push(entry);
   }
   private updateFocusLabels() {
     let nearest: (typeof this.focusLabels)[number] | undefined;
