@@ -117,3 +117,11 @@ The flat ground cap is now a vertex-colored disc with broad sun and shade patche
 None of this collides, joins `world.obstacles`, or enters the playable disc; silhouettes and clouds stay beyond radius 46. The motes use a 32×32 sprite generated in memory, so there is still no image file, remote texture or atlas.
 
 The pass is budgeted for older iPads. Compared with the previous build in the same 1194×834 Chromium capture, each region adds 5–7 draw calls (3–5%) and 6,000–11,000 triangles. City is the busiest region at 196 calls and 142,272 triangles; Atlantis has the most calls at 216. Distant shapes, clouds, lowland and ground use matte Lambert shading. On devices that cannot hold frame rate at the lowest adaptive resolution, clouds, shafts and motes switch off while the sky and silhouettes remain. Physical iPad frame rate is still unmeasured.
+
+## Powers and space trips — October 31
+
+The gold star stays the Jump button; Power is a smaller marmalade button with a cream lightning bolt, placed lower-left of Jump so the two never overlap the D-pad. Its short capital label changes with the form: BOOP, DASH, ROAR, ACHOO, GEYSER and so on.
+
+Power effects are bright, unlit toy shapes in each form's own palette: leaves, snowflakes, bubbles, sand puffs, glitter and cheese crumbs, sprayed along the facing direction. They also include roar and echo rings, ground shockwaves, a column for the whale shark's geyser, a curved arc for the giraffe's neck swing, a cyan beam for Boltback and a cream cartoon glove with a red cuff for Calvin's boop. A launched animal tumbles up and away with a warm comet glow and a sparkle trail, then becomes a four-point twinkle near the top of the view; both star shapes are drawn in memory, not loaded from files. It floats back down to its own spot and lands with the existing happy bounce.
+
+Reduced motion keeps about a third of the particles, a single ring, and no tumbling in flight. Each power press adds a few short-lived batched meshes, which are disposed within about a second. Moving powers and flights add one small particle batch every 50 ms while they last.

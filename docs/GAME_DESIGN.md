@@ -10,7 +10,7 @@ Explore a readable region, follow landmarks or animal hints, jump onto an easy-t
 
 ## Player and controls
 
-The player starts as a human in Meadow. Landscape iPad touch controls are primary: a creature selector on the left, movement on the right, and a prominent star action button. Keyboard and mouse remain available. The camera follows automatically. Following the October 18 polish feedback, start immediately without automatic training or recurring instruction panels. Cage roofs and the star action communicate the rescue interaction; Pause → How to play holds optional movement, rescue, transformation, and ability instructions. NPC speech follows deliberate star interactions rather than proximity.
+The player starts as a human in Meadow. Landscape iPad touch controls are primary: a creature selector on the left, movement on the right, a prominent gold star Jump button, and a separate orange Power button beside it. Keyboard and mouse remain available. The camera follows automatically. Following the October 18 polish feedback, start immediately without automatic training or recurring instruction panels. Cage roofs and the star action communicate the rescue interaction; Pause → How to play holds optional movement, rescue, transformation, and ability instructions. NPC speech follows deliberate star interactions rather than proximity. Jump also flies or swims upward when held; Power uses the current form's own move.
 
 ## Transformations and rescue
 
@@ -24,7 +24,13 @@ The connected regions are Meadow, Winter, Savannah, Desert, Beach, Ocean/Atlanti
 
 Required creatures include an Arctic fox; tiger, lion, giraffe, and hippopotamus; sharks, piranhas, barracudas, whale shark, kraken, and leviathan; and city rat, peregrine falcon, giant cow, plus original giant reptile and mechanical reptile characters where rights to franchise characters are unavailable. Baby Godzilla and the final demon lizard are concepts in the brief; public implementation must use suitable original designs unless rights permit. Boy siren is explicitly permitted and sings an original jazz-inspired motif. No mermaids.
 
-Wildlife NPCs wander, react, and provide authored contextual hints. The optional punch-like interaction is a harmless wobble or bounce. Animals never fight back or appear injured.
+Wildlife NPCs wander, react, and provide authored contextual hints. Jumping beside one makes it wobble and talk. Animals never fight back or appear injured.
+
+## Powers — October 31
+
+Calvin asked for separate Jump and Power buttons, a unique power for every animal, and powers that shoot a wild animal into space. All 23 forms have their own power, defined as data in `powers.ts`: Calvin's Super boop is the brief's harmless cartoon punch, and the animals dash, pounce, roar, sneeze sand, splash, spin, blow bubbles, ping, beam, swing their necks, twirl tentacles and stomp. Each has its own reach, motion, particles and sound. Powers cost nothing and can be repeated after a 0.45-second animation beat, matching the brief's "no cooldown or only negligible animation delays".
+
+Powers act where the player faces, with gentle aim help toward an animal roughly in front and a small forgiveness margin like the cage landing. A wild animal inside a power's reach rockets up and away with a sparkle trail, becomes a twinkling star near the top of the view, and three seconds later floats back down to its own spot with a happy bounce and a funny line. It is never hurt, never fights back, and its hints keep working. Bosses and caged animals are unaffected, so rescues still need cage jumps and bosses still need head stomps. Moving powers respect scenery, cages and hazards, and a pounce landing on a cage still rescues.
 
 ## Bosses and ending
 

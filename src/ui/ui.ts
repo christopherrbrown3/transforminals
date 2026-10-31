@@ -1,4 +1,5 @@
 import { BIOMES, CREATURES, HUMAN, getCreature, type BiomeId } from '../game/data';
+import { powerFor } from '../game/powers';
 import type { SaveData } from '../game/progression';
 import { icon, portrait } from './icons';
 import { worldMap } from './worldMap';
@@ -6,6 +7,7 @@ export interface UIActions {
   start(): void;
   move(key: string, down: boolean): void;
   star(down: boolean): void;
+  power(): void;
   form(id: string): void;
   pause(paused: boolean): void;
   travel(id: BiomeId): void;
@@ -36,7 +38,7 @@ export class UI {
  <div id="boss-hud" hidden><strong id="boss-name"></strong><div id="boss-hearts"></div><span id="boss-hits"></span></div>
  <div id="dialogue" hidden role="status"></div><div id="toast" hidden role="status"></div>
 
- <div class="touch-controls"><button id="star-button" aria-label="Jump or use power">${icon('star', 38)}<span id="star-label">JUMP</span></button><div class="dpad" aria-label="Movement controls"><button data-move="forward" class="forward" aria-label="Move forward">${icon('up', 32)}</button><button data-move="left" class="left" aria-label="Move left">${icon('left', 32)}</button><button data-move="backward" class="backward" aria-label="Move backward">${icon('down', 32)}</button><button data-move="right" class="right" aria-label="Move right">${icon('right', 32)}</button><i></i></div></div>
+ <div class="touch-controls"><div class="action-buttons"><button id="power-button" aria-label="Use power">${icon('bolt', 30)}<span id="power-label">BOOP</span></button><button id="star-button" aria-label="Jump">${icon('star', 38)}<span id="star-label">JUMP</span></button></div><div class="dpad" aria-label="Movement controls"><button data-move="forward" class="forward" aria-label="Move forward">${icon('up', 32)}</button><button data-move="left" class="left" aria-label="Move left">${icon('left', 32)}</button><button data-move="backward" class="backward" aria-label="Move backward">${icon('down', 32)}</button><button data-move="right" class="right" aria-label="Move right">${icon('right', 32)}</button><i></i></div></div>
  <button id="update-button" hidden>A fresh adventure update is ready</button><div id="cutscene" hidden><p id="cutscene-text"></p><button id="skip-button">Skip ${icon('right', 18)}</button></div>
  </div>
  <section id="title-screen" class="title-screen"><div class="title-copy"><div class="calvin-badge">${icon('spark', 18)} A wild adventure by Calvin</div><h1>TRANS<span>FORMINALS</span></h1><p class="title-tagline">Little rescues.<br>Enormous possibilities.</p><p class="title-description">Jump on cages. Make new friends.<br>Become anyone you rescue.</p><button id="start-button" class="primary-button">${icon('play', 23)} ${save.rescued.length ? 'Continue adventure' : 'Let’s get wild'}</button><p class="title-note">No lives to lose. Just a whole world to find.</p></div><div class="title-world-label">CLOVER MEADOW <span>your adventure starts here</span></div><span class="version">v0.5.0 · Made for Calvin</span></section>
@@ -75,6 +77,9 @@ export class UI {
         this.bindHold(button, (down) => actions.move(button.dataset.move!, down)),
       );
     this.bindHold(this.el('star-button'), (down) => actions.star(down));
+    this.bindHold(this.el('power-button'), (down) => {
+      if (down) actions.power();
+    });
     this.renderForms();
   }
   el(id: string) {
@@ -127,15 +132,12 @@ export class UI {
     }
     this.el('rescue-count').textContent = `${this.save.rescued.length} / ${CREATURES.length}`;
     const c = getCreature(current);
-    this.el('star-button').setAttribute('title', c.power);
-    this.el('star-label').textContent =
-      current === 'human'
-        ? 'JUMP'
-        : c.kind === 'fly'
-          ? 'FLAP'
-          : c.kind === 'swim'
-            ? 'BOOST'
-            : 'POWER';
+    const fly = c.kind === 'fly';
+    this.el('star-button').setAttribute('aria-label', fly ? 'Jump, or hold to fly' : 'Jump');
+    this.el('star-label').textContent = fly ? 'FLY' : 'JUMP';
+    this.el('power-button').setAttribute('aria-label', `Use power: ${c.power}`);
+    this.el('power-button').setAttribute('title', c.power);
+    this.el('power-label').textContent = powerFor(current).label;
   }
   biome(id: BiomeId) {
     this.currentBiome = id;
@@ -287,7 +289,7 @@ export class UI {
   private help() {
     this.open(
       'Ready when you are',
-      `<div class="play-help"><p>${icon('up')} Move with the arrow buttons, WASD, or keyboard arrows.</p><p>${icon('star')} Tap the star or press Space to jump. Land on a cage roof to free a friend.</p><p>${icon('paw')} Tap a friend on the left to become them. The star uses their power. Hold it to fly or swim up.</p><p>${icon('map')} Glowing rings lead to new places. The map lets you revisit them.</p><p>You can’t lose. Explore as much as you like.</p></div><button id="help-done" class="primary-button">Let’s explore ${icon('play', 18)}</button>`,
+      `<div class="play-help"><p>${icon('up')} Move with the arrow buttons, WASD, or keyboard arrows.</p><p>${icon('star')} Tap the star or press Space to jump. Land on a cage roof to free a friend. Hold it to fly or swim up.</p><p>${icon('paw')} Tap a friend on the left to become them.</p><p>${icon('bolt')} Tap the lightning bolt or press E to use your power. Every friend has their own. Point it at a wild animal to send them zooming into space. They always float home again!</p><p>${icon('map')} Glowing rings lead to new places. The map lets you revisit them.</p><p>You can’t lose. Explore as much as you like.</p></div><button id="help-done" class="primary-button">Let’s explore ${icon('play', 18)}</button>`,
     );
     this.el('help-done').onclick = () => this.close();
   }

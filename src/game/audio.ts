@@ -103,6 +103,19 @@ export class AudioManager {
       this.tone(n, 0.22, i * 0.09, cue === 'flush' ? 'sawtooth' : 'sine', 0.12),
     );
   }
+  /** Each power has its own short motif. */
+  power(notes: number[], wave: OscillatorType) {
+    notes.forEach((n, i) => this.tone(n, 0.16, i * 0.06, wave, wave === 'sine' ? 0.1 : 0.045));
+  }
+  /** A rising whoosh as a wild animal rockets toward space. */
+  launch() {
+    [262, 330, 392, 523, 659, 784].forEach((n, i) => this.tone(n, 0.12, i * 0.05, 'sine', 0.07));
+  }
+  /** The cartoon "ding" when the animal becomes a star. */
+  twinkle() {
+    this.tone(1568, 0.5, 0, 'sine', 0.08);
+    this.tone(2093, 0.6, 0.08, 'sine', 0.05);
+  }
   creature(id: string) {
     const low = ['giant-cow', 'giant-reptile', 'hippo', 'leviathan'].includes(id);
     const pitch = low ? 110 : ['bat', 'falcon', 'glow-moth'].includes(id) ? 740 : 523;
