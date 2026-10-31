@@ -116,6 +116,7 @@ test('keeps essential controls inside compact landscape and hides clutter', asyn
         '#map-button',
         '#pause-button',
         '#star-button',
+        '#power-button',
         '[data-move="forward"]',
         '[data-move="left"]',
         '[data-move="right"]',
@@ -129,20 +130,21 @@ test('keeps essential controls inside compact landscape and hides clutter', asyn
           return [selector, { x: rect.x, y: rect.y, right: rect.right, bottom: rect.bottom }];
         }),
       );
-      const dpad = selectors.slice(5).map((selector) => bounds[selector]);
+      const dpad = selectors
+        .filter((selector) => selector.startsWith('[data-move'))
+        .map((selector) => bounds[selector]);
       const star = bounds['#star-button'];
+      const power = bounds['#power-button'];
+      type Rect = (typeof bounds)[string];
+      const overlaps = (a: Rect, b: Rect) =>
+        a.x < b.right && a.right > b.x && a.y < b.bottom && a.bottom > b.y;
       return {
         width: innerWidth,
         height: innerHeight,
         documentWidth: document.documentElement.scrollWidth,
         bounds,
-        starDpadOverlap: dpad.some(
-          (control) =>
-            star.x < control.right &&
-            star.right > control.x &&
-            star.y < control.bottom &&
-            star.bottom > control.y,
-        ),
+        starDpadOverlap: dpad.some((control) => overlaps(star, control)),
+        powerOverlap: overlaps(power, star) || dpad.some((control) => overlaps(power, control)),
       };
     });
 
@@ -158,6 +160,7 @@ test('keeps essential controls inside compact landscape and hides clutter', asyn
       );
     }
     expect(result.starDpadOverlap).toBe(false);
+    expect(result.powerOverlap).toBe(false);
     const renderer = await snapshot(page);
     expect(renderer.renderer.pixelRatio).toBeLessThanOrEqual(0.5);
     expect(renderer.renderer.visibleLabels).toBeLessThanOrEqual(1);

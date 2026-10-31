@@ -8,11 +8,24 @@ import {
   BOSSES,
   CAGE_POSITIONS,
   CREATURES,
+  SPACE_LINES,
   getBiome,
   getCreature,
   type BiomeId,
   type Boss,
 } from './data';
+import {
+  aimTarget,
+  facingVector,
+  inReach,
+  POWER_SLACK,
+  powerFor,
+  spaceTrip,
+  sweepsPath,
+  tripPoint,
+  yawToward,
+  type PowerSpec,
+} from './powers';
 import {
   bossHearts,
   cageLanding,
@@ -44,6 +57,15 @@ interface NPC {
   name: string;
   line: number;
   wobble: number;
+  /** A harmless, power-launched trip to space and back home. */
+  trip?: {
+    phase: 'launch' | 'away' | 'return';
+    time: number;
+    start: THREE.Vector3;
+    peak: THREE.Vector3;
+    end: THREE.Vector3;
+    scale: number;
+  };
 }
 interface Encounter {
   data: Boss;
@@ -90,7 +112,19 @@ export class Game {
   private input = new Set<string>();
   private starHeld = false;
   private jumpCooldown = 0;
-  private powerTime = 0;
+  private powerCooldown = 0;
+  /** Moving powers carry the player a short way along their facing direction. */
+  private dash: {
+    time: number;
+    speed: number;
+    dir: THREE.Vector3;
+    spec: PowerSpec;
+    spin: boolean;
+    zigzag: boolean;
+  } | null = null;
+  /** Hopping powers land a beat later with their shockwave. */
+  private slam: { time: number; spec: PowerSpec } | null = null;
+  private twirlTime = 0;
   private lastTime = 0;
   private elapsed = 0;
   private saveTime = 0;
@@ -145,6 +179,7 @@ export class Game {
         start: () => this.start(),
         move: (key, down) => this.move(key, down),
         star: (down) => this.star(down),
+        power: () => this.power(),
         form: (id) => this.transform(id),
         pause: (paused) => this.pause(paused),
         travel: (id) => this.travel(id),
@@ -294,6 +329,10 @@ export class Game {
       event.preventDefault();
       if (!event.repeat) this.star(down);
     }
+    if (down && !event.repeat && (event.code === 'KeyE' || event.code === 'KeyF')) {
+      event.preventDefault();
+      this.power();
+    }
     if (down && !event.repeat && event.code === 'KeyM' && this.state === 'playing') this.ui.map();
     if (down && !event.repeat && event.code === 'Escape') {
       if (!this.ui.el('panel').hidden) this.ui.close();
@@ -347,7 +386,6 @@ export class Game {
             ? 10.8
             : 9.6;
       this.jumpCooldown = 0.32;
-      this.powerTime = 1.2;
       this.audio.play('jump');
       if (creature.id !== 'human') this.audio.creature(creature.id);
       this.effects.burst(
@@ -356,7 +394,10 @@ export class Game {
         22,
       );
       for (const npc of this.npcs)
-        if (npc.model.position.distanceTo(new THREE.Vector3(this.player.x, 0, this.player.z)) < 4) {
+        if (
+          !npc.trip &&
+          npc.model.position.distanceTo(new THREE.Vector3(this.player.x, 0, this.player.z)) < 4
+        ) {
           npc.wobble = 1;
           if (this.biome === 'ocean' && npc === this.npcs[0]) {
             this.audio.siren();
@@ -373,20 +414,101 @@ export class Game {
                   ],
           );
         }
-      if (this.form === 'mecha-reptile') {
-        const beam = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.14, 0.3, 8, 8),
-          new THREE.MeshBasicMaterial({ color: 0x92f9ee }),
-        );
-        beam.rotation.x = Math.PI / 2;
-        beam.position.set(this.player.x, this.player.y + 1.5, this.player.z - 4);
-        this.region.add(beam);
-        window.setTimeout(() => {
-          this.region.remove(beam);
-          disposeObject(beam);
-        }, 220);
-      }
     }
+  }
+  /** The Power button: each form's own move, which can send wild animals on a trip to space. */
+  power() {
+    if (this.state !== 'playing' || this.powerCooldown > 0) return;
+    this.audio.start();
+    const spec = powerFor(this.form);
+    const scale = getCreature(this.form).kind === 'giant' ? 2 : 1;
+    // Gentle aim help: turn toward a wild animal roughly in front before acting.
+    const free = this.npcs.filter((npc) => !npc.trip);
+    const target = aimTarget(
+      spec,
+      this.player,
+      facingVector(this.avatar.rotation.y),
+      free.map((npc) => npc.model.position),
+    );
+    if (target >= 0) this.avatar.rotation.y = yawToward(this.player, free[target].model.position);
+    const facing = facingVector(this.avatar.rotation.y);
+    const forward = new THREE.Vector3(facing.x, 0, facing.z);
+    this.powerCooldown = 0.45;
+    this.audio.power(spec.notes, spec.wave);
+    // Upward boosts start only from the ground, so repeated presses cannot climb into the sky.
+    const grounded = this.player.y < 0.15;
+    if (spec.motion === 'hop') {
+      if (grounded) this.player.vy = Math.max(this.player.vy, 6);
+      this.slam = { time: 0.42, spec };
+      return;
+    }
+    this.effects.power(
+      spec,
+      new THREE.Vector3(this.player.x, this.player.y + 0.8 * scale, this.player.z),
+      forward,
+      scale,
+    );
+    const travel = spec.distance ?? 6;
+    if (spec.motion === 'leap') {
+      this.dash = {
+        time: 0.7,
+        speed: travel / 0.7,
+        dir: forward,
+        spec,
+        spin: false,
+        zigzag: false,
+      };
+      if (grounded) this.player.vy = Math.max(this.player.vy, 8.5);
+    } else if (spec.motion === 'dive') {
+      this.dash = {
+        time: 0.45,
+        speed: travel / 0.45,
+        dir: forward,
+        spec,
+        spin: false,
+        zigzag: false,
+      };
+      if (this.player.y > 1) this.player.vy = -9;
+      else if (grounded) this.player.vy = 6;
+    } else if (sweepsPath(spec))
+      this.dash = {
+        time: travel / 26,
+        speed: 26,
+        dir: forward,
+        spec,
+        spin: spec.motion === 'spin',
+        zigzag: spec.motion === 'zigzag',
+      };
+    else {
+      if (spec.motion === 'twirl') this.twirlTime = 0.7;
+      this.powerHits(spec);
+    }
+  }
+  private powerHits(spec: PowerSpec) {
+    const facing = facingVector(this.avatar.rotation.y);
+    for (const npc of this.npcs)
+      if (!npc.trip && inReach(spec, this.player, facing, npc.model.position, POWER_SLACK))
+        this.launch(npc);
+  }
+  /** Sends a wild animal on a harmless cartoon trip to space; it floats home a moment later. */
+  private launch(npc: NPC) {
+    const start = npc.model.position.clone();
+    const side = Math.sign(start.x - this.player.x) || 1;
+    const { peak, end } = spaceTrip(
+      start,
+      {
+        position: this.camera.position,
+        direction: this.camera.getWorldDirection(new THREE.Vector3()),
+        fov: this.camera.fov,
+      },
+      side,
+    );
+    npc.trip = { phase: 'launch', time: 0, start, peak, end, scale: npc.model.scale.x };
+    npc.wobble = 0;
+    this.effects.burst(start.clone().setY(0.6), 0xfff1b8, 30);
+    this.effects.comet(npc.model, 1.8);
+    this.audio.launch();
+    this.ui.toast(`Wheee! ${npc.name} zoomed off to space!`);
   }
   transform(id: string) {
     if (this.state !== 'playing' || !canTransform(this.saves.data, id)) return;
@@ -457,6 +579,9 @@ export class Game {
     this.sun.color.setHex(sun.color);
     this.sun.intensity = sun.intensity;
     this.focusLabels = [];
+    this.dash = null;
+    this.slam = null;
+    this.twirlTime = 0;
     this.seenCaveRooms.clear();
     this.sirenTime = 0;
     this.cages = [];
@@ -835,13 +960,8 @@ export class Game {
     if (moving) {
       dx /= length;
       dz /= length;
-      const speed =
-        c.speed *
-        (this.powerTime > 0 && (['fox', 'arctic-fox', 'rat'].includes(c.id) || c.kind === 'swim')
-          ? 1.5
-          : 1);
-      this.player.x += dx * speed * dt;
-      this.player.z += dz * speed * dt;
+      this.player.x += dx * c.speed * dt;
+      this.player.z += dz * c.speed * dt;
       const angle = Math.atan2(-dx, -dz);
       this.avatar.rotation.y +=
         Math.atan2(
@@ -849,6 +969,7 @@ export class Game {
           Math.cos(angle - this.avatar.rotation.y),
         ) * Math.min(1, dt * 13);
     }
+    this.updatePowerMotion(dt);
     for (const obstacle of this.world.obstacles) {
       const distance = Math.hypot(this.player.x - obstacle.x, this.player.z - obstacle.z);
       const min = obstacle.radius + 0.4;
@@ -983,7 +1104,6 @@ export class Game {
           break;
         }
     animateCreature(this.avatar, this.elapsed, moving);
-    if (this.powerTime > 0 && ['turtle', 'kraken'].includes(c.id)) this.avatar.rotation.y += dt * 9;
     this.avatar.position.set(
       this.player.x,
       this.player.y + (moving ? 0.04 * Math.sin(this.elapsed * 12) : 0),
@@ -994,17 +1114,117 @@ export class Game {
       Math.max(0.4, 1 - this.player.y * 0.06) * (c.kind === 'giant' ? 2 : 1),
     );
   }
+  /** Moves applied before collisions, so dashes and pounces still stop at scenery and cages. */
+  private updatePowerMotion(dt: number) {
+    const dash = this.dash;
+    if (dash) {
+      const before = dash.time;
+      dash.time -= dt;
+      const step = dash.speed * dt;
+      this.player.x += dash.dir.x * step;
+      this.player.z += dash.dir.z * step;
+      if (dash.zigzag) {
+        const side = Math.sin(dash.time * 40) * step * 0.9;
+        this.player.x -= dash.dir.z * side;
+        this.player.z += dash.dir.x * side;
+      }
+      if (dash.spin) this.avatar.rotation.y += dt * 20;
+      if (Math.floor(before / 0.05) !== Math.floor(dash.time / 0.05))
+        this.effects.trail(
+          new THREE.Vector3(this.player.x, this.player.y + 0.4, this.player.z),
+          dash.spec.colors,
+          dash.spec.particle,
+        );
+      for (const npc of this.npcs)
+        if (
+          !npc.trip &&
+          Math.hypot(npc.model.position.x - this.player.x, npc.model.position.z - this.player.z) <
+            dash.spec.reach
+        )
+          this.launch(npc);
+      if (dash.time <= 0) {
+        if (dash.spin) this.avatar.rotation.y = yawToward({ x: 0, z: 0 }, dash.dir);
+        this.dash = null;
+      }
+    }
+    if (this.slam) {
+      this.slam.time -= dt;
+      if (this.slam.time <= 0) {
+        const { spec } = this.slam;
+        this.slam = null;
+        const facing = facingVector(this.avatar.rotation.y);
+        this.effects.power(
+          spec,
+          new THREE.Vector3(this.player.x, this.player.y + 0.5, this.player.z),
+          new THREE.Vector3(facing.x, 0, facing.z),
+          getCreature(this.form).kind === 'giant' ? 2 : 1,
+        );
+        this.audio.tone(spec.notes[0] / 2, 0.3, 0, 'sine', 0.12);
+        this.powerHits(spec);
+      }
+    }
+    if (this.twirlTime > 0) {
+      this.twirlTime = Math.max(0, this.twirlTime - dt);
+      this.avatar.rotation.y += dt * 16;
+    }
+  }
   private updateNPCs(dt: number) {
     for (const [i, npc] of this.npcs.entries()) {
       npc.wobble = Math.max(0, npc.wobble - dt);
       const wander = this.elapsed * 0.25 + i * 2;
-      npc.model.position.x = npc.origin.x + Math.sin(wander) * 1.7;
-      npc.model.position.z = npc.origin.z + Math.cos(wander) * 1.2;
+      const homeX = npc.origin.x + Math.sin(wander) * 1.7;
+      const homeZ = npc.origin.z + Math.cos(wander) * 1.2;
+      if (npc.trip && this.updateTrip(npc, dt, homeX, homeZ)) continue;
+      npc.model.position.x = homeX;
+      npc.model.position.z = homeZ;
       npc.model.position.y = npc.wobble > 0 ? Math.abs(Math.sin(npc.wobble * 20)) * 0.5 : 0;
       npc.model.rotation.z = npc.wobble > 0 ? Math.sin(npc.wobble * 25) * 0.2 : 0;
       npc.model.rotation.y = Math.sin(wander) * 0.8;
       animateCreature(npc.model, this.elapsed + i, true);
     }
+  }
+  /** Drives a space trip; returns false once the animal is safely home again. */
+  private updateTrip(npc: NPC, dt: number, homeX: number, homeZ: number) {
+    const trip = npc.trip!;
+    const before = trip.time;
+    trip.time += dt;
+    const calm = this.saves.data.settings.reducedMotion;
+    if (trip.phase === 'launch') {
+      // A slow lift-off, then a zoom toward the twinkle point near the top of the view.
+      const t = Math.min(1, trip.time / 1.8);
+      tripPoint(trip.start, trip.peak, trip.end, t ** 1.7, npc.model.position);
+      npc.model.rotation.set(calm ? 0 : trip.time * 7, calm ? 0 : trip.time * 5, 0);
+      npc.model.scale.setScalar(trip.scale * (1.2 - 0.6 * t));
+      if (Math.floor(before / 0.05) !== Math.floor(trip.time / 0.05))
+        this.effects.trail(npc.model.position, [0xfff1b8, 0xffd476, 0xffffff]);
+      if (t >= 1) {
+        this.effects.twinkle(trip.end);
+        this.audio.twinkle();
+        npc.model.visible = false;
+        trip.phase = 'away';
+        trip.time = 0;
+      }
+      return true;
+    }
+    if (trip.phase === 'away') {
+      if (trip.time >= 3) {
+        trip.phase = 'return';
+        trip.time = 0;
+        npc.model.visible = true;
+        npc.model.scale.setScalar(trip.scale);
+      }
+      return true;
+    }
+    // Float home from above, slowing for a soft landing.
+    const t = Math.min(1, trip.time / 1.6);
+    npc.model.position.set(homeX, 14 * (1 - t) ** 1.6, homeZ);
+    npc.model.rotation.set(0, calm ? 0 : (1 - t) * 8, 0);
+    if (t < 1) return true;
+    npc.trip = undefined;
+    npc.wobble = 1;
+    if (Math.hypot(homeX - this.player.x, homeZ - this.player.z) < 18)
+      this.ui.dialogue(npc.name, SPACE_LINES[npc.line++ % SPACE_LINES.length]);
+    return false;
   }
   private updateCaveDiscovery() {
     if (this.biome !== 'underground') return;
@@ -1204,7 +1424,7 @@ export class Game {
     this.lastTime = ms;
     this.elapsed += dt;
     this.jumpCooldown = Math.max(0, this.jumpCooldown - dt);
-    this.powerTime = Math.max(0, this.powerTime - dt);
+    this.powerCooldown = Math.max(0, this.powerCooldown - dt);
     this.portalCooldown = Math.max(0, this.portalCooldown - dt);
     if (this.state === 'playing') {
       this.updatePlayer(dt);
@@ -1296,6 +1516,14 @@ export class Game {
         : null,
       updates: { pending: this.updateReady, activations: this.testUpdateActivations },
       player: { ...this.player },
+      facing: this.avatar.rotation.y,
+      npcs: this.npcs.map((npc) => ({
+        name: npc.name,
+        trip: npc.trip?.phase ?? 'home',
+        x: npc.model.position.x,
+        y: npc.model.position.y,
+        z: npc.model.position.z,
+      })),
       boss: this.encounter
         ? {
             id: this.encounter.data.id,
@@ -1332,6 +1560,9 @@ export class Game {
         this.notifyUpdate(() => {
           this.testUpdateActivations++;
         }),
+      face: (x: number, z: number) => {
+        this.avatar.rotation.y = yawToward(this.player, { x, z });
+      },
       teleport: (x: number, z: number) => {
         this.player = { x, y: 0, z, vy: 0 };
         this.lastSafe = { x, z };

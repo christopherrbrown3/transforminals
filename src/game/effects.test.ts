@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { disposeObject, Effects } from './effects';
+import { POWERS } from './powers';
 
 describe('scene resource cleanup', () => {
   it.each(['expire', 'clear'] as const)('releases portal rings on %s exactly once', (cleanup) => {
@@ -71,6 +72,36 @@ describe('scene resource cleanup', () => {
       expect(onInstanceDispose).toHaveBeenCalledTimes(1);
       expect(onGeometryDispose).toHaveBeenCalledTimes(1);
       expect(onMaterialDispose).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it.each(['expire', 'clear'] as const)(
+    'releases every power look, comet trail and space twinkle on %s',
+    (cleanup) => {
+      const scene = new THREE.Scene();
+      const effects = new Effects(scene);
+      const rider = new THREE.Object3D();
+      for (const spec of Object.values(POWERS))
+        effects.power(spec, new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, -1), 1);
+      effects.trail(new THREE.Vector3(), [0xffd476], 'leaf');
+      effects.comet(rider, 1.8);
+      effects.twinkle(new THREE.Vector3(0, 4, -60));
+      const resources = new Set<THREE.BufferGeometry | THREE.Material | THREE.Texture>();
+      scene.traverse((o) => {
+        const mesh = o as THREE.Mesh;
+        if (mesh.geometry) resources.add(mesh.geometry);
+        const material = mesh.material as THREE.SpriteMaterial | undefined;
+        if (material) resources.add(material);
+        if (material?.map) resources.add(material.map);
+      });
+      expect(scene.children.length).toBeGreaterThan(Object.keys(POWERS).length);
+      const released = new Set<unknown>();
+      resources.forEach((r) => r.addEventListener('dispose', () => released.add(r)));
+      if (cleanup === 'expire') for (let i = 0; i < 30; i++) effects.tick(0.1);
+      else effects.clear();
+      expect(scene.children).toHaveLength(0);
+      expect(effects.active).toBe(0);
+      expect(released.size).toBe(resources.size);
     },
   );
 });

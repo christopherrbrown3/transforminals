@@ -14,11 +14,12 @@ Twinkle Caverns has connected chambers, tunnels, three surface exits, and a hidd
 
 ## How to play
 
-- Use the big arrows on the right to move and the star to jump or use your form's power.
+- Use the big arrows on the right to move and the gold star to jump. The orange lightning button uses your form's own power.
 - Land on a cage roof to rescue its animal. Tap its portrait on the left, or open Friends, to transform.
 - Hold the star to fly or swim upward. Release it to glide or drift down. All forms can explore on land.
 - Walk through a labeled glowing ring to visit another region. The Map button opens an illustrated atlas with your current location and the number of friends still waiting in every region. Tap a visited place to return, or choose Return to Meadow.
-- On desktop, use WASD or arrow keys, Space, M for the map, and Escape for pause. H returns to Meadow.
+- Point a power at a wild animal to send it zooming into space. It always floats home a few seconds later.
+- On desktop, use WASD or arrow keys, Space to jump, E or F for your power, M for the map, and Escape for pause. H returns to Meadow.
 
 Saves stay in this browser on this device. There is no account or cloud save. Start a new adventure from pause/settings only after confirming the reset.
 

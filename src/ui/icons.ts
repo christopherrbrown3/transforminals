@@ -15,6 +15,7 @@ export function icon(name: string, size = 24) {
     heart: '<path d="M12 21 3.5 12.5A5.5 5.5 0 0 1 12 5a5.5 5.5 0 0 1 8.5 7.5Z"/>',
     check: '<path d="m5 12 4 4L19 6"/>',
     spark: '<path d="m12 2 3 7 7 3-7 3-3 7-3-7-7-3 7-3Z"/>',
+    bolt: '<path d="M13 2 4 14h7l-1 8 9-12h-7Z"/>',
   };
   return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] ?? paths.paw}</svg>`;
 }
