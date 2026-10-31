@@ -81,3 +81,34 @@ it('draws shallow water along the playable beach swimming boundary without cover
   expect(sand.intersectObjects(surfaces)).toHaveLength(0);
   disposeObject(world.group);
 });
+
+it('covers the whole disc with gently mottled ground close to each region color', () => {
+  for (const id of ['meadow', 'desert', 'underground']) {
+    const world = buildWorld(id);
+    world.group.updateMatrixWorld(true);
+    const surface = world.group.getObjectByName('ground-surface') as THREE.Mesh;
+    for (const [x, z] of [
+      [0, 0],
+      [30, -28],
+      [-41, 5],
+      [12, 40],
+    ]) {
+      const ray = new THREE.Raycaster(new THREE.Vector3(x, 5, z), new THREE.Vector3(0, -1, 0));
+      const [hit] = ray.intersectObject(surface);
+      expect(hit?.point.y, `${id} ground at ${x},${z}`).toBeCloseTo(0, 5);
+    }
+    const colors = surface.geometry.getAttribute('color');
+    const base = new THREE.Color(id === 'underground' ? 0x5d627c : world.ground);
+    let total = 0;
+    for (let i = 0; i < colors.count; i++) {
+      const shade = new THREE.Color(colors.getX(i), colors.getY(i), colors.getZ(i));
+      expect(
+        Math.abs(shade.r - base.r) + Math.abs(shade.g - base.g) + Math.abs(shade.b - base.b),
+      ).toBeLessThan(0.3);
+      total += shade.g;
+    }
+    // Patches vary the turf without shifting the region's overall color.
+    expect(total / colors.count).toBeCloseTo(base.g, 1);
+    disposeObject(world.group);
+  }
+});

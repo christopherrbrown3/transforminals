@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { createCreature, createBoss, animateCreature, fitCagedCreature } from './creatures';
 import { buildWorld, type BuiltWorld } from './world';
+import { buildAtmosphere, type Atmosphere } from './atmosphere';
 import { animateBeach, BEACH_WATER_EDGE } from './beach';
 import {
   BOSSES,
@@ -77,6 +78,7 @@ export class Game {
   private scene = new THREE.Scene();
   private camera = new THREE.PerspectiveCamera(48, 1, 0.1, 160);
   private world!: BuiltWorld;
+  private atmosphere!: Atmosphere;
   private region = new THREE.Group();
   private avatar = new THREE.Group();
   private effects: Effects;
@@ -106,7 +108,10 @@ export class Game {
   }> = [];
   private maxPixelRatio = 2;
   private softwareTest = false;
+  /** Set when even the lowest adaptive resolution misses the frame target. */
+  private liteAtmosphere = false;
   private sun = new THREE.DirectionalLight(0xfff3da, 2.6);
+  private hemisphere = new THREE.HemisphereLight(0xe4f3ff, 0x59744d, 1.65);
   private qualityTime = 0;
   private qualityFrames = 0;
   private shadow: THREE.Mesh;
@@ -163,11 +168,11 @@ export class Game {
     this.maxPixelRatio = Math.min(window.devicePixelRatio, 2);
     this.renderer.setPixelRatio(this.softwareTest ? 0.5 : this.maxPixelRatio);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.03;
+    this.renderer.toneMapping = THREE.NeutralToneMapping;
+    this.renderer.toneMappingExposure = 1;
     this.renderer.shadowMap.enabled = !this.softwareTest;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
-    this.scene.add(new THREE.HemisphereLight(0xe4f3ff, 0x59744d, 1.65));
+    this.scene.add(this.hemisphere);
     this.sun.position.set(-18, 32, 18);
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(2048, 2048);
@@ -433,7 +438,6 @@ export class Game {
   private loadBiome(id: BiomeId, announce: boolean) {
     const previous = this.region;
     this.scene.remove(previous);
-    disposeObject(previous);
     this.region = new THREE.Group();
     this.scene.add(this.region);
     const destination = getBiome(id).id;
@@ -441,8 +445,17 @@ export class Game {
     this.biome = destination;
     this.world = buildWorld(this.biome);
     this.region.add(this.world.group);
-    this.scene.background = new THREE.Color(this.world.sky);
-    this.scene.fog = new THREE.Fog(this.world.sky, 45, 105);
+    this.atmosphere = buildAtmosphere(this.biome);
+    this.region.add(this.atmosphere.group);
+    this.atmosphere.setLite(this.liteAtmosphere);
+    this.scene.background = new THREE.Color(this.atmosphere.horizon);
+    this.scene.fog = new THREE.Fog(this.atmosphere.horizon, 45, 105);
+    const { hemisphere, sun } = this.atmosphere;
+    this.hemisphere.color.setHex(hemisphere.sky);
+    this.hemisphere.groundColor.setHex(hemisphere.ground);
+    this.hemisphere.intensity = hemisphere.intensity;
+    this.sun.color.setHex(sun.color);
+    this.sun.intensity = sun.intensity;
     this.focusLabels = [];
     this.seenCaveRooms.clear();
     this.sirenTime = 0;
@@ -477,6 +490,10 @@ export class Game {
     this.ui.biome(this.biome);
     this.ui.renderForms(this.form);
     this.portalCooldown = 1;
+    // Acquire the new region's shader programs before releasing the old one. Programs both
+    // regions use then stay cached instead of being destroyed and recompiled on every trip.
+    this.renderer.compile(this.scene, this.camera);
+    disposeObject(previous);
   }
   private addCage(id: string, x: number, z: number) {
     const group = new THREE.Group();
@@ -1208,6 +1225,7 @@ export class Game {
     this.updateFocusLabels();
     this.sun.position.set(this.player.x - 18, 32 + this.player.y, this.player.z + 18);
     this.sun.target.position.set(this.player.x, 0, this.player.z);
+    this.atmosphere.tick(this.elapsed, this.camera, this.saves.data.settings.reducedMotion);
     this.renderer.render(this.scene, this.camera);
     this.qualityTime += document.hidden || this.state === 'paused' ? 0 : wallDt;
     if (!document.hidden && this.state !== 'paused') this.qualityFrames++;
@@ -1219,6 +1237,11 @@ export class Game {
         if (fps < 26 && ratio > floor) this.renderer.setPixelRatio(Math.max(floor, ratio - 0.25));
         else if (fps > 50 && ratio < this.maxPixelRatio)
           this.renderer.setPixelRatio(Math.min(this.maxPixelRatio, ratio + 0.25));
+        // At the resolution floor, shed decorative sky extras before anything play needs.
+        // They return only after full resolution has been restored.
+        if (fps < 26 && ratio <= floor) this.liteAtmosphere = true;
+        else if (fps > 50 && ratio >= this.maxPixelRatio) this.liteAtmosphere = false;
+        this.atmosphere.setLite(this.liteAtmosphere);
       }
       this.qualityTime = 0;
       this.qualityFrames = 0;
@@ -1286,6 +1309,7 @@ export class Game {
         : null,
       renderer: {
         pixelRatio: this.renderer.getPixelRatio(),
+        liteAtmosphere: this.liteAtmosphere,
         visibleLabels: this.focusLabels.filter((item) => item.tag.visible).length,
         labels: this.focusLabels
           .filter((item) => item.tag.visible)

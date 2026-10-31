@@ -15,7 +15,6 @@ export interface BuiltWorld {
   obstacles: WorldObstacle[];
   hazards: Array<{ x: number; z: number; radius: number }>;
   water: boolean;
-  sky: number;
   ground: number;
 }
 type Shape = 'box' | 'rounded' | 'rock' | 'cone' | 'cylinder' | 'arch';
@@ -24,20 +23,17 @@ interface Stamp {
   size: [number, number, number];
   rotation: number;
 }
-const palettes: Record<
-  string,
-  { sky: number; ground: number; path: number; leaf: number; cliff: number }
-> = {
-  meadow: { sky: 0xc7e9dc, ground: 0x8dbf76, path: 0xe5cda1, leaf: 0x5f9c69, cliff: 0xadc292 },
-  winter: { sky: 0xc6dfec, ground: 0xe6eff1, path: 0xbacfdc, leaf: 0x77aeb4, cliff: 0xa9c5d5 },
-  savannah: { sky: 0xf4dfad, ground: 0xc7bf6d, path: 0xe0c493, leaf: 0x929a53, cliff: 0xbba06a },
-  desert: { sky: 0xf3d9b0, ground: 0xe4c68d, path: 0xf2dcaa, leaf: 0x74a786, cliff: 0xcaa476 },
-  beach: { sky: 0xbceaf0, ground: 0xf6e6bb, path: 0xfff0ce, leaf: 0x74ac86, cliff: 0xcbbd9c },
-  ocean: { sky: 0x528ea4, ground: 0x95c7bb, path: 0xb4d7c5, leaf: 0x78b5ae, cliff: 0x699da6 },
-  volcano: { sky: 0xcba6a5, ground: 0x716b7d, path: 0xaaa0a4, leaf: 0x967e87, cliff: 0x59566b },
-  underground: { sky: 0x737995, ground: 0x9996ad, path: 0xb5afc3, leaf: 0x9ecbc1, cliff: 0x686c86 },
-  rifts: { sky: 0x8e85b7, ground: 0x8a81a2, path: 0xb1a0bb, leaf: 0xc097c7, cliff: 0x656581 },
-  city: { sky: 0xc9e1dc, ground: 0xa2bcb0, path: 0x859397, leaf: 0x74a883, cliff: 0xadbdb7 },
+const palettes: Record<string, { ground: number; path: number; leaf: number; cliff: number }> = {
+  meadow: { ground: 0x8dbf76, path: 0xe5cda1, leaf: 0x5f9c69, cliff: 0xadc292 },
+  winter: { ground: 0xe6eff1, path: 0xbacfdc, leaf: 0x77aeb4, cliff: 0xa9c5d5 },
+  savannah: { ground: 0xc7bf6d, path: 0xe0c493, leaf: 0x929a53, cliff: 0xbba06a },
+  desert: { ground: 0xe4c68d, path: 0xf2dcaa, leaf: 0x74a786, cliff: 0xcaa476 },
+  beach: { ground: 0xf6e6bb, path: 0xfff0ce, leaf: 0x74ac86, cliff: 0xcbbd9c },
+  ocean: { ground: 0x95c7bb, path: 0xb4d7c5, leaf: 0x78b5ae, cliff: 0x699da6 },
+  volcano: { ground: 0x716b7d, path: 0xaaa0a4, leaf: 0x967e87, cliff: 0x59566b },
+  underground: { ground: 0x9996ad, path: 0xb5afc3, leaf: 0x9ecbc1, cliff: 0x686c86 },
+  rifts: { ground: 0x8a81a2, path: 0xb1a0bb, leaf: 0xc097c7, cliff: 0x656581 },
+  city: { ground: 0xa2bcb0, path: 0x859397, leaf: 0x74a883, cliff: 0xadbdb7 },
 };
 const cages = [
   [-7, -9],
@@ -57,6 +53,67 @@ const wildlife = [
   [-17, -2],
   [17, -5],
 ];
+
+/** Softly mottled turf: broad patches of sun and shade read as terrain without a texture. */
+function groundSurface(color: number, accent: number, id: string) {
+  const rings = 30,
+    segments = 80,
+    radius = 43;
+  const phase = [...id].reduce((n, ch) => n + ch.charCodeAt(0), 0) * 0.37;
+  const field = (x: number, z: number) =>
+    Math.sin(x * 0.17 + phase) * Math.cos(z * 0.13 - phase * 0.5) * 0.55 +
+    Math.sin((x + z) * 0.29 + phase * 1.7) * 0.3 +
+    Math.sin(x * 0.53 - z * 0.47 + phase) * 0.15;
+  const base = new THREE.Color(color),
+    tint = new THREE.Color(accent),
+    shade = new THREE.Color();
+  const positions: number[] = [],
+    colors: number[] = [],
+    index: number[] = [];
+  const vertex = (x: number, z: number) => {
+    const n = field(x, z);
+    const rim = THREE.MathUtils.smoothstep(Math.hypot(x, z), radius - 6, radius);
+    shade
+      .copy(base)
+      .lerp(tint, Math.max(0, n) * 0.5)
+      .offsetHSL(0, 0, n * 0.045)
+      .multiplyScalar(1 - rim * 0.09);
+    positions.push(x, 0, z);
+    colors.push(shade.r, shade.g, shade.b);
+  };
+  vertex(0, 0);
+  for (let ring = 1; ring <= rings; ring++)
+    for (let s = 0; s < segments; s++) {
+      const a = (s / segments) * Math.PI * 2,
+        r = (ring / rings) * radius;
+      vertex(Math.sin(a) * r, Math.cos(a) * r);
+    }
+  const at = (ring: number, s: number) => 1 + (ring - 1) * segments + (s % segments);
+  for (let s = 0; s < segments; s++) index.push(0, at(1, s), at(1, s + 1));
+  for (let ring = 1; ring < rings; ring++)
+    for (let s = 0; s < segments; s++)
+      index.push(
+        at(ring, s),
+        at(ring + 1, s),
+        at(ring + 1, s + 1),
+        at(ring, s),
+        at(ring + 1, s + 1),
+        at(ring, s + 1),
+      );
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geometry.setIndex(index);
+  geometry.computeVertexNormals();
+  const surface = new THREE.Mesh(
+    geometry,
+    // The ground fills most of the screen; matte Lambert keeps that fill cheap on older iPads.
+    new THREE.MeshLambertMaterial({ vertexColors: true }),
+  );
+  surface.name = 'ground-surface';
+  surface.receiveShadow = true;
+  return surface;
+}
 
 /** Hand-staged landmarks with deterministic, instanced decoration. */
 export function buildWorld(id: string): BuiltWorld {
@@ -139,16 +196,13 @@ export function buildWorld(id: string): BuiltWorld {
     footprints.push({ x, z, radius });
     if (height !== undefined) obstacles.push({ x, z, radius: collisionRadius, height });
   }
+  const groundColor = id === 'underground' ? 0x5d627c : p.ground;
   const groundMesh = new THREE.Mesh(
-    new THREE.CylinderGeometry(43, 43, 1.5, 64),
-    new THREE.MeshStandardMaterial({
-      color: id === 'underground' ? 0x5d627c : p.ground,
-      roughness: 1,
-    }),
+    new THREE.CylinderGeometry(43, 43, 1.5, 64, 1, true),
+    new THREE.MeshStandardMaterial({ color: groundColor, roughness: 1 }),
   );
   groundMesh.position.y = -0.75;
-  groundMesh.receiveShadow = true;
-  group.add(groundMesh);
+  group.add(groundMesh, groundSurface(groundColor, p.cliff, id));
   // Toy diorama edge provides a readable world boundary without enclosing the play space.
   const base = new THREE.Mesh(
     new THREE.CylinderGeometry(43, 41.7, 2.5, 64),
@@ -632,7 +686,6 @@ export function buildWorld(id: string): BuiltWorld {
     obstacles,
     hazards,
     water: id === 'ocean' || id === 'beach',
-    sky: p.sky,
     ground: p.ground,
   };
 }
