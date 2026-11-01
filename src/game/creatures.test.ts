@@ -132,29 +132,43 @@ describe.each(BOSSES)('$name boss sculpture', (boss) => {
     }
   });
 
-  it('keeps the visible landing target level and clear at the existing collision height', () => {
+  it('lands head stomps on its own head or hat, with no golden cap on top', () => {
     const model = createBoss(boss.id);
     built.push(model);
-    const scale = boss.id === 'demon-lizard' ? 1.7 : 1;
-    const height = (boss.id === 'demon-lizard' ? 3.39 : 2.49) * scale;
-    model.scale.setScalar(scale);
-    expect(Number(model.userData.headHeight) * scale).toBeCloseTo(height);
+    const height = Number(model.userData.headHeight);
+    // The old cap sat at 2.49 (3.39 for the final lizard); the head itself is a little lower.
+    expect(height).toBeLessThan(boss.id === 'demon-lizard' ? 3.39 : 2.49);
+    expect(height).toBeGreaterThan(boss.id === 'demon-lizard' ? 2.9 : 2.2);
     const ray = new THREE.Raycaster();
     for (const time of [0, 0.37, 1.21, 3.8, 6.4]) {
       animateCreature(model, time, false);
       model.updateMatrixWorld(true);
-      for (const x of [-0.3, 0, 0.3]) {
-        for (const z of [-0.25, 0, 0.25]) {
-          ray.set(new THREE.Vector3(x * scale, height + 2, z * scale), new THREE.Vector3(0, -1, 0));
-          const landing = ray.intersectObject(model, true)[0];
-          expect(landing, 'the landing footprint must remain solid').toBeDefined();
-          expect(
-            Math.abs(landing.point.y - height),
-            'hats and horns must not hide the landing cap',
-          ).toBeLessThan(0.01);
-        }
-      }
+      ray.set(new THREE.Vector3(0, height + 2, 0), new THREE.Vector3(0, -1, 0));
+      const landing = ray.intersectObject(model, true)[0];
+      expect(landing, 'the stomp lands on the model itself').toBeDefined();
+      expect(Math.abs(landing.point.y - height)).toBeLessThan(0.03);
     }
+  });
+
+  it('becomes a playable form that stands on the ground, faces ahead and walks', () => {
+    const model = createCreature(boss.id);
+    built.push(model);
+    expect(model.name).toBe(`creature:${boss.id}`);
+    for (const time of [0, 0.21, 0.8]) {
+      animateCreature(model, time, true);
+      const size = finiteBounds(model);
+      expect(size).not.toBeNull();
+      const bounds = new THREE.Box3().setFromObject(model);
+      expect(bounds.min.y).toBeGreaterThan(-0.05);
+      expect(bounds.min.y).toBeLessThan(0.1);
+      // A little taller than Calvin; giant forms are drawn at double scale by the game.
+      expect(size!.y).toBeGreaterThan(1.3);
+      expect(size!.y).toBeLessThan(2.8);
+    }
+    // The walk swings the legs, unlike the boss's standing idle.
+    const legs = (model.userData.bossRig as { legs: THREE.Object3D[] }).legs;
+    animateCreature(model, 0.15, true);
+    expect(Math.abs(legs[0].rotation.x)).toBeGreaterThan(0.1);
   });
 });
 

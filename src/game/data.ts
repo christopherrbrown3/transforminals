@@ -227,7 +227,8 @@ export const HUMAN: Creature = {
   speed: 8,
   kind: 'land',
 };
-export const getCreature = (id: string) => CREATURES.find((c) => c.id === id) ?? HUMAN;
+export const getCreature = (id: string) =>
+  CREATURES.find((c) => c.id === id) ?? BOSS_FORMS.find((c) => c.id === id) ?? HUMAN;
 export interface Biome {
   id: BiomeId;
   name: string;
@@ -386,6 +387,8 @@ export interface Boss {
   hits: number;
   intro: string;
   outro: string;
+  /** Beating a boss makes it a playable form. */
+  form: Pick<Creature, 'color' | 'power' | 'speed' | 'kind'>;
 }
 export const BOSSES: Boss[] = [
   {
@@ -395,6 +398,7 @@ export const BOSSES: Boss[] = [
     hits: 3,
     intro: 'I AM ENORMOUS! Well… for my age. Jump on my head!',
     outro: 'Sproutzilla has agreed to use an indoor roar.',
+    form: { color: '#78aa64', power: 'Tiny roar', speed: 10, kind: 'giant' },
   },
   {
     id: 'frosty',
@@ -403,6 +407,7 @@ export const BOSSES: Boss[] = [
     hits: 3,
     intro: 'My hat is itchy! Bounce on my head to shake it loose!',
     outro: 'A snowman becomes a snowpuddle. He seems delighted.',
+    form: { color: '#8fc3d4', power: 'Snowball fountain', speed: 8, kind: 'land' },
   },
   {
     id: 'sandwich',
@@ -411,6 +416,7 @@ export const BOSSES: Boss[] = [
     hits: 3,
     intro: 'Behold my sandy sandwich! Head boops welcome.',
     outro: 'The Sand Witch is now a very small picnic.',
+    form: { color: '#c48b4f', power: 'Crumb whirl', speed: 8, kind: 'land' },
   },
   {
     id: 'flushington',
@@ -419,6 +425,7 @@ export const BOSSES: Boss[] = [
     hits: 3,
     intro: 'I demand a royal flush! Bounce on my head!',
     outro: 'FLUUUSH! The Admiral has gone down in history. And the bowl.',
+    form: { color: '#4f98a8', power: 'Royal flush', speed: 9, kind: 'swim' },
   },
   {
     id: 'lava-lump',
@@ -427,6 +434,7 @@ export const BOSSES: Boss[] = [
     hits: 3,
     intro: 'I am too warm for hugs. Try some head boings!',
     outro: 'Lava Lump has popped into a pile of popcorn.',
+    form: { color: '#f4ac69', power: 'Popcorn pop', speed: 7, kind: 'land' },
   },
   {
     id: 'demon-lizard',
@@ -435,8 +443,17 @@ export const BOSSES: Boss[] = [
     hits: 5,
     intro: 'ROOOAR! Five head boops? That is my one weakness!',
     outro: 'THANK YOU! You made the whole world a little wilder.',
+    form: { color: '#9971aa', power: 'Sparkle breath', speed: 10, kind: 'fly' },
   },
 ];
+/** Defeated bosses join the transformation list. They never count toward the required rescues. */
+export const BOSS_FORMS: Creature[] = BOSSES.map(({ id, name, biome, form }) => ({
+  id,
+  name,
+  biome,
+  ...form,
+}));
+export const isBossForm = (id: string) => BOSSES.some((b) => b.id === id);
 /** What a wild animal says after floating home from a harmless power-launched trip to space. */
 export const SPACE_LINES = [
   'Wheee! I waved at the moon. It waved back!',

@@ -1,5 +1,5 @@
 import { BIOMES, BOSSES, CREATURES } from './data';
-import { freshSave, SAVE_VERSION, type SaveData } from './progression';
+import { canTransform, freshSave, SAVE_VERSION, type SaveData } from './progression';
 export const SAVE_KEY = 'transforminals-save';
 export interface StorageLike {
   getItem(key: string): string | null;
@@ -21,15 +21,12 @@ export function migrateSave(input: unknown): SaveData {
     CREATURES.map((c) => c.id),
   );
   base.secrets = strings(raw.secrets, ['crystal-nook']);
-  base.form =
-    typeof raw.form === 'string' && (raw.form === 'human' || base.rescued.includes(raw.form))
-      ? raw.form
-      : 'human';
   base.defeated = strings(
     raw.defeated,
     BOSSES.map((b) => b.id),
   );
   if (base.defeated.includes('demon-lizard')) base.rescued = CREATURES.map((c) => c.id);
+  base.form = typeof raw.form === 'string' && canTransform(base, raw.form) ? raw.form : 'human';
   base.discovered = [
     ...new Set([
       'meadow',

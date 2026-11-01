@@ -87,6 +87,13 @@ describe('save migration and recovery', () => {
     expect(BOSSES.some(({ id }) => id === 'demon-lizard')).toBe(true);
   });
 
+  it('keeps a beaten boss as the saved form, but not a boss that is still unbeaten', () => {
+    expect(migrateSave({ version: 3, defeated: ['lava-lump'], form: 'lava-lump' }).form).toBe(
+      'lava-lump',
+    );
+    expect(migrateSave({ version: 3, defeated: ['frosty'], form: 'lava-lump' }).form).toBe('human');
+  });
+
   it('rejects a future schema version without overwriting the existing save', () => {
     const storage = new MemoryStorage();
     const future = JSON.stringify({ version: SAVE_VERSION + 1, rescued: ['fox'] });

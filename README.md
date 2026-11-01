@@ -19,6 +19,8 @@ Twinkle Caverns has connected chambers, tunnels, three surface exits, and a hidd
 - Hold the star to fly or swim upward. Release it to glide or drift down. All forms can explore on land.
 - Walk through a labeled glowing ring to visit another region. The Map button opens an illustrated atlas with your current location and the number of friends still waiting in every region. Tap a visited place to return, or choose Return to Meadow.
 - Point a power at a wild animal to send it zooming into space. It always floats home a few seconds later.
+- Trees, roofs, rocks and other scenery are solid: land on top and you stay there. Some, like the desert pyramid, can be climbed with jumps.
+- Bounce on a boss's head to beat it, then play as that boss. Beaten bosses join your forms with their own powers.
 - On desktop, use WASD or arrow keys, Space to jump, E or F for your power, M for the map, and Escape for pause. H returns to Meadow.
 
 Saves stay in this browser on this device. There is no account or cloud save. Start a new adventure from pause/settings only after confirming the reset.

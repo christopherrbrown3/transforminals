@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import type { WorldSurface } from './world';
 
 /** Matches the swimming boundary in the player controller. All playable water stays west of it. */
 export const BEACH_WATER_EDGE = -20;
@@ -12,7 +13,9 @@ interface BeachPlacement {
     footprint: number,
     height?: number,
     collisionRadius?: number,
+    top?: WorldSurface,
   ) => void;
+  slab: (x: number, z: number, half: [number, number], height: number) => void;
 }
 interface Bubble {
   x: number;
@@ -85,7 +88,7 @@ function palmLeaf(): THREE.BufferGeometry {
 
 /** Original coastal toy scenery, batched separately from the other biome geometry. */
 export function buildBeach(group: THREE.Group, placement: BeachPlacement): void {
-  const { clear, occupy } = placement;
+  const { clear, occupy, slab } = placement;
   const ocean = new THREE.Mesh(
     new THREE.RingGeometry(43, 86, 96),
     new THREE.MeshStandardMaterial({ color: 0x4caec7, roughness: 0.4, metalness: 0.02 }),
@@ -212,7 +215,8 @@ export function buildBeach(group: THREE.Group, placement: BeachPlacement): void 
         [topX + (k - 1) * 0.24 * size, topY - 0.25 * size, z + 0.12 * (k % 2)],
         [0.4 * size, 0.46 * size, 0.4 * size],
       );
-    occupy(x, z, radius, topY + 0.3 * size, 0.43 * size);
+    // The fronds hold a landing; they spread from the leaning crown, just off the trunk base.
+    occupy(x, z, radius, topY + 0.3 * size, 0.43 * size, { y: topY, radius: 1.5 * size });
   }
   for (const [x, z, size, lean] of [
     [-11, 2, 1.15, 1],
@@ -242,7 +246,7 @@ export function buildBeach(group: THREE.Group, placement: BeachPlacement): void 
         [0, 0.1, 0],
         false,
       );
-    occupy(x, z, 1.9, 2.9, 0.25);
+    occupy(x, z, 1.9, 2.9, 0.25, { y: 2.5, radius: 1.4 });
   }
   umbrella(-13, -6, 0xe99b91);
   umbrella(10, -5, 0x75b5c2);
@@ -274,7 +278,10 @@ export function buildBeach(group: THREE.Group, placement: BeachPlacement): void 
     stamp('rounded', 0xc09b67, [23, 0.4, 2.43], [0.55, 0.8, 0.045]);
     stamp('pole', 0x9e8057, [24.7, 2.4, 3], [0.08, 1.2, 0.08]);
     stamp('box', 0x64b5c7, [25.1, 2.83, 3], [0.8, 0.38, 0.06]);
-    occupy(23, 3, 3.2, 3.1, 2.7);
+    occupy(23, 3, 3.2);
+    // Two climbable towers joined by the lower gatehouse wall.
+    for (const s of [-1, 1]) slab(23 + s * 1.7, 3, [0.725, 0.725], 2.05);
+    slab(23, 3, [1.05, 0.55], 1.155);
   }
   // Swim rings, shell fans, sea stars, and dune grass provide recognizable close detail.
   for (const [x, z] of [

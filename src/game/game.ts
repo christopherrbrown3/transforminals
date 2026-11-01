@@ -37,6 +37,7 @@ import {
 import { SaveManager } from './save';
 import { portalDestinations } from './portals';
 import { CAVE_LAYOUT, isCaveWalkable, nearestCaveWalkable } from './caves';
+import { floorBelow, pushOut } from './surfaces';
 import { AudioManager } from './audio';
 import { Effects, label, disposeObject } from './effects';
 import { UI } from '../ui/ui';
@@ -364,12 +365,19 @@ export class Game {
     this.audio.start();
     this.jump();
   }
+  /** The surface under the player: the ground, or a top or ledge they are on or above. */
+  private floor() {
+    return floorBelow(this.world, this.player, this.player.y);
+  }
+  private standing() {
+    return this.player.y - this.floor() < 0.15;
+  }
   private jump() {
     if (this.jumpCooldown > 0) return;
     const creature = getCreature(this.form);
     const swimming =
       this.biome === 'ocean' || (this.biome === 'beach' && this.player.x < BEACH_WATER_EDGE);
-    if (this.player.y < 0.15 || creature.kind === 'fly' || swimming) {
+    if (this.standing() || creature.kind === 'fly' || swimming) {
       const nearBoss =
         this.encounter?.active &&
         Math.hypot(
@@ -435,8 +443,8 @@ export class Game {
     const forward = new THREE.Vector3(facing.x, 0, facing.z);
     this.powerCooldown = 0.45;
     this.audio.power(spec.notes, spec.wave);
-    // Upward boosts start only from the ground, so repeated presses cannot climb into the sky.
-    const grounded = this.player.y < 0.15;
+    // Upward boosts start only from solid footing, so repeated presses cannot climb the sky.
+    const grounded = this.standing();
     if (spec.motion === 'hop') {
       if (grounded) this.player.vy = Math.max(this.player.vy, 6);
       this.slam = { time: 0.42, spec };
@@ -468,7 +476,7 @@ export class Game {
         spin: false,
         zigzag: false,
       };
-      if (this.player.y > 1) this.player.vy = -9;
+      if (this.player.y - this.floor() > 1) this.player.vy = -9;
       else if (grounded) this.player.vy = 6;
     } else if (sweepsPath(spec))
       this.dash = {
@@ -885,13 +893,18 @@ export class Game {
     if (enc.hits >= enc.data.hits) {
       this.saves.data.defeated.push(enc.data.id);
       this.saves.save();
+      // A beaten boss becomes a playable form straight away.
+      this.ui.renderForms(this.form);
       if (enc.data.id === 'demon-lizard') {
         enc.defeating = 0.001;
         this.victory(false);
       } else {
         enc.defeating = 0.001;
         this.audio.play(enc.data.id === 'flushington' ? 'flush' : 'victory');
-        this.beginCutscene(enc.data.outro, 3, 'defeat', () => this.removeBoss());
+        this.beginCutscene(enc.data.outro, 3, 'defeat', () => {
+          this.removeBoss();
+          this.ui.toast(`${enc.data.name} joined your forms! Tap it to play as the boss.`);
+        });
       }
     }
   }
@@ -933,7 +946,11 @@ export class Game {
           disposeObject(this.celebration);
           this.celebration = null;
         }
-        this.ui.toast('World saved. Keep exploring, transforming, and being wonderfully wild!');
+        this.ui.toast(
+          replay
+            ? 'World saved. Keep exploring, transforming, and being wonderfully wild!'
+            : 'World saved! The Demon Lizard joined your forms. Now you can fly as the boss!',
+        );
       },
     );
   }
@@ -970,14 +987,7 @@ export class Game {
         ) * Math.min(1, dt * 13);
     }
     this.updatePowerMotion(dt);
-    for (const obstacle of this.world.obstacles) {
-      const distance = Math.hypot(this.player.x - obstacle.x, this.player.z - obstacle.z);
-      const min = obstacle.radius + 0.4;
-      if (distance < min && this.player.y < (obstacle.height ?? 4)) {
-        this.player.x = obstacle.x + (distance ? (this.player.x - obstacle.x) / distance : 1) * min;
-        this.player.z = obstacle.z + (distance ? (this.player.z - obstacle.z) / distance : 0) * min;
-      }
-    }
+    pushOut(this.world.obstacles, this.player);
     if (this.gate && Math.hypot(this.player.x, this.player.z + 19) < 6.5) {
       // Enclose only the arena, keeping the northern city cage reachable around either side.
       const angle = Math.atan2(this.player.x, this.player.z + 19);
@@ -1005,19 +1015,26 @@ export class Game {
     const flying = c.kind === 'fly' && this.starHeld;
     if ((water || flying) && this.starHeld) {
       this.player.vy = Math.min(this.player.vy + dt * 16, 5);
-      if (this.player.y > 9) this.player.vy = Math.min(this.player.vy, -1);
+      // Flyers can rise above the tallest City roof; swimmers stay lower.
+      if (this.player.y > (water ? 9 : 13)) this.player.vy = Math.min(this.player.vy, -1);
     } else this.player.vy -= dt * (water ? 5 : c.kind === 'fly' ? 8 : 18);
     this.player.y += this.player.vy * dt;
-    if (this.player.y < 0) {
-      this.player.y = 0;
+    // Treetops, roofs, rocks and ledges hold a landing just like the ground does.
+    const floor = floorBelow(this.world, this.player, previousY);
+    if (this.player.y < floor) {
+      this.player.y = floor;
       this.player.vy = 0;
-      if (previousY > 0 && c.kind === 'giant') {
-        this.effects.burst(new THREE.Vector3(this.player.x, 0.3, this.player.z), 0xffd37a, 60);
+      if (previousY > floor && c.kind === 'giant') {
+        this.effects.burst(
+          new THREE.Vector3(this.player.x, floor + 0.3, this.player.z),
+          0xffd37a,
+          60,
+        );
         this.audio.tone(90, 0.35, 0, 'sine', 0.2);
         this.audio.tone(135, 0.3, 0.1, 'sine', 0.1);
       }
     }
-    if (this.starHeld && this.player.y === 0 && this.jumpCooldown <= 0) this.jump();
+    if (this.starHeld && this.player.y === floor && this.jumpCooldown <= 0) this.jump();
     const enc = this.encounter;
     if (enc && enc.defeating === 0) {
       const distance = Math.hypot(
@@ -1109,9 +1126,11 @@ export class Game {
       this.player.y + (moving ? 0.04 * Math.sin(this.elapsed * 12) : 0),
       this.player.z,
     );
-    this.shadow.position.set(this.player.x, 0.065, this.player.z);
+    // The contact shadow sits on whatever is below, which shows where a landing will be.
+    const shadowFloor = floorBelow(this.world, this.player, this.player.y);
+    this.shadow.position.set(this.player.x, shadowFloor + 0.065, this.player.z);
     this.shadow.scale.setScalar(
-      Math.max(0.4, 1 - this.player.y * 0.06) * (c.kind === 'giant' ? 2 : 1),
+      Math.max(0.4, 1 - (this.player.y - shadowFloor) * 0.06) * (c.kind === 'giant' ? 2 : 1),
     );
   }
   /** Moves applied before collisions, so dashes and pounces still stop at scenery and cages. */
