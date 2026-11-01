@@ -3,6 +3,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { buildDetailedAnimal, animateDetailedAnimal, type AnimalRig } from './animalModels';
 import { buildBoss, animateBoss } from './bossModels';
+import { getCreature, isBossForm } from './data';
 
 /** All models use feet at Y=0 and look down -Z. No remote textures. */
 const ink = 0x243c3b;
@@ -134,6 +135,7 @@ function limb(
   return pivot;
 }
 export function createCreature(id: string): THREE.Group {
+  if (isBossForm(id)) return createBossForm(id);
   const g = new THREE.Group();
   g.name = `creature:${id}`;
   const rig: Rig = { legs: [], wings: [] };
@@ -169,9 +171,21 @@ export function createBoss(id: string): THREE.Group {
   return batchCreatureMeshes(g);
 }
 
+/** A defeated boss as a playable form: a little over Calvin's height, or giant-sized. */
+function createBossForm(id: string): THREE.Group {
+  const g = new THREE.Group();
+  g.name = `creature:${id}`;
+  g.userData.kind = id;
+  const boss = createBoss(id);
+  boss.scale.setScalar(getCreature(id).kind === 'giant' ? 0.6 : 0.8);
+  g.add(boss);
+  g.userData.bossRig = boss.userData.bossRig;
+  return g;
+}
+
 export function animateCreature(group: THREE.Group, time: number, moving: boolean): void {
   if (group.userData.bossRig) {
-    animateBoss(group, time);
+    animateBoss(group, time, moving);
     return;
   }
   const rig = group.userData.rig as Rig | undefined;

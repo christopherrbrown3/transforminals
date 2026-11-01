@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CREATURES } from './data';
+import { BOSSES, CREATURES } from './data';
 import {
   bossHearts,
   canEnterFinal,
@@ -8,6 +8,7 @@ import {
   freshSave,
   headStompEligible,
   rescue,
+  unlockedForms,
 } from './progression';
 
 describe('rescue progression', () => {
@@ -33,6 +34,26 @@ describe('rescue progression', () => {
     expect(canTransform(save, 'fox')).toBe(false);
     rescue(save, 'fox');
     expect(canTransform(save, 'fox')).toBe(true);
+  });
+
+  it('unlocks each boss as a form once it is beaten, without counting it as a rescue', () => {
+    const save = freshSave();
+    rescue(save, 'fox');
+    for (const boss of BOSSES) expect(canTransform(save, boss.id), boss.id).toBe(false);
+    save.defeated.push('frosty', 'demon-lizard');
+    expect(canTransform(save, 'frosty')).toBe(true);
+    expect(canTransform(save, 'demon-lizard')).toBe(true);
+    expect(canTransform(save, 'sproutzilla')).toBe(false);
+    expect(unlockedForms(save).map((c) => c.id)).toEqual([
+      'human',
+      'fox',
+      'frosty',
+      'demon-lizard',
+    ]);
+    // Beaten bosses never stand in for the required rescues.
+    expect(canEnterFinal(save.rescued)).toBe(false);
+    expect(rescue(save, 'frosty')).toBe(false);
+    expect(save.rescued).toEqual(['fox']);
   });
 
   it('opens the final gate only when every required creature is rescued', () => {

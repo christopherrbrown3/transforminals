@@ -1,6 +1,14 @@
-import { BIOMES, CREATURES, HUMAN, getCreature, type BiomeId } from '../game/data';
+import {
+  BIOMES,
+  BOSS_FORMS,
+  CREATURES,
+  HUMAN,
+  getCreature,
+  isBossForm,
+  type BiomeId,
+} from '../game/data';
 import { powerFor } from '../game/powers';
-import type { SaveData } from '../game/progression';
+import { canTransform, unlockedForms, type SaveData } from '../game/progression';
 import { icon, portrait } from './icons';
 import { worldMap } from './worldMap';
 export interface UIActions {
@@ -106,15 +114,15 @@ export class UI {
   }
   renderForms(current = this.form) {
     this.form = current;
-    const key = `${current}:${this.save.rescued.join(',')}`;
+    const key = `${current}:${this.save.rescued.join(',')}:${this.save.defeated.join(',')}`;
     if (key === this.previousForms) return;
     this.previousForms = key;
-    const unlocked = [HUMAN, ...CREATURES.filter((c) => this.save.rescued.includes(c.id))];
+    const unlocked = unlockedForms(this.save);
     const scrollTop = this.el('forms').scrollTop;
     this.el('forms').innerHTML = unlocked
       .map(
         (c) =>
-          `<button class="form-button ${c.id === current ? 'selected' : ''}" data-form="${c.id}" aria-label="Transform into ${c.name}" aria-pressed="${c.id === current}" style="--creature-color:${c.color}">${portrait(c.id, c.color)}<span>${c.id === 'human' ? 'Calvin' : c.name}</span></button>`,
+          `<button class="form-button ${c.id === current ? 'selected' : ''}" data-form="${c.id}" aria-label="Transform into ${c.name}" aria-pressed="${c.id === current}" style="--creature-color:${c.color}">${portrait(c.id, c.color, isBossForm(c.id))}<span>${c.id === 'human' ? 'Calvin' : c.name}</span></button>`,
       )
       .join('');
     this.root
@@ -241,13 +249,16 @@ export class UI {
   collection() {
     this.open(
       `Your wild friends · ${this.save.rescued.length}/${CREATURES.length}`,
-      `<p class="panel-intro">Hop onto cage roofs to rescue friends. Tap any rescued friend to become them.</p>${this.save.secrets.includes('crystal-nook') ? `<p class="panel-intro">${icon('spark', 18)} Humming Crystal Nook discovered</p>` : ''}<div class="collection-grid">${[
+      `<p class="panel-intro">Hop onto cage roofs to rescue friends, and bounce on a boss's head to play as it. Tap anyone you have unlocked to become them.</p>${this.save.secrets.includes('crystal-nook') ? `<p class="panel-intro">${icon('spark', 18)} Humming Crystal Nook discovered</p>` : ''}<div class="collection-grid">${[
         HUMAN,
         ...CREATURES,
+        ...BOSS_FORMS,
       ]
         .map((c) => {
-          const unlocked = c.id === 'human' || this.save.rescued.includes(c.id);
-          return `<button data-choose="${c.id}" ${unlocked ? '' : 'disabled'}>${portrait(c.id, unlocked ? c.color : '#9bada2')}<strong>${c.name}</strong><small>${unlocked ? c.power : BIOMES.find((b) => b.id === c.biome)!.name}</small></button>`;
+          const unlocked = canTransform(this.save, c.id);
+          const boss = isBossForm(c.id);
+          const place = BIOMES.find((b) => b.id === c.biome)!.name;
+          return `<button data-choose="${c.id}" ${unlocked ? '' : 'disabled'}>${portrait(c.id, unlocked ? c.color : '#9bada2', boss)}<strong>${c.name}</strong><small>${unlocked ? c.power : boss ? `Boss in ${place}` : place}</small></button>`;
         })
         .join('')}</div>`,
       this.el('collection-button'),

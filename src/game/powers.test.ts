@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { CREATURES, HUMAN } from './data';
+import { BOSS_FORMS, CREATURES, HUMAN } from './data';
 import {
   aimTarget,
   facingVector,
@@ -12,7 +12,7 @@ import {
   yawToward,
 } from './powers';
 
-const forms = [HUMAN, ...CREATURES];
+const forms = [HUMAN, ...CREATURES, ...BOSS_FORMS];
 
 describe('powers', () => {
   it('gives every form its own power and button label', () => {

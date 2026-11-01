@@ -3,16 +3,36 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { buildCaveFloorplan, CAVE_LAYOUT, isCaveWalkable } from './caves';
 import { buildBeach, BEACH_WATER_EDGE } from './beach';
 
+/** A standable flat top: a disc of `radius`, or an axis-aligned box of `half` extents. */
+export interface WorldSurface {
+  y: number;
+  radius?: number;
+  half?: [number, number];
+}
+
 export interface WorldObstacle {
   x: number;
   z: number;
+  /** Collision radius. A box keeps its bounding radius here for the camera's sight line. */
   radius: number;
+  /** Visual height, used for camera clearance and, without a `top`, as the standing height. */
   height?: number;
+  /** Half extents of an axis-aligned box footprint, used for collision in place of the circle. */
+  half?: [number, number];
+  /** A top that differs from the footprint, such as a canopy over a trunk or a stepped cone. */
+  top?: WorldSurface;
+}
+
+/** A floating top (a lintel, a leafy tuft, a hovering island) that never blocks walking. */
+export interface WorldLedge extends WorldSurface {
+  x: number;
+  z: number;
 }
 
 export interface BuiltWorld {
   group: THREE.Group;
   obstacles: WorldObstacle[];
+  ledges: WorldLedge[];
   hazards: Array<{ x: number; z: number; radius: number }>;
   water: boolean;
   ground: number;
@@ -121,6 +141,7 @@ export function buildWorld(id: string): BuiltWorld {
   const group = new THREE.Group();
   group.name = `biome:${id}`;
   const obstacles: BuiltWorld['obstacles'] = [];
+  const ledges: BuiltWorld['ledges'] = [];
   const hazards: BuiltWorld['hazards'] = [];
   const footprints: Array<{ x: number; z: number; radius: number }> = [];
   const buckets = new Map<
@@ -192,10 +213,26 @@ export function buildWorld(id: string): BuiltWorld {
     if (Math.abs(x) < 14 + radius && z > 4) return false;
     return !footprints.some((f) => Math.hypot(x - f.x, z - f.z) < radius + f.radius + 0.65);
   }
-  function occupy(x: number, z: number, radius: number, height?: number, collisionRadius = radius) {
+  function occupy(
+    x: number,
+    z: number,
+    radius: number,
+    height?: number,
+    collisionRadius = radius,
+    top?: WorldSurface,
+  ) {
     footprints.push({ x, z, radius });
-    if (height !== undefined) obstacles.push({ x, z, radius: collisionRadius, height });
+    if (height !== undefined) obstacles.push({ x, z, radius: collisionRadius, height, top });
   }
+  /** A solid box (a building, a pyramid step) that is walked around and stood on. */
+  function slab(x: number, z: number, half: [number, number], height: number) {
+    obstacles.push({ x, z, radius: Math.hypot(...half), height, half });
+  }
+  /** Stacked rings up a cone or dome: [radius, standing height] from the base inward. */
+  function tiers(x: number, z: number, rings: Array<[number, number]>) {
+    for (const [radius, height] of rings) obstacles.push({ x, z, radius, height });
+  }
+  const ledge = (x: number, z: number, top: WorldSurface) => ledges.push({ x, z, ...top });
   const groundColor = id === 'underground' ? 0x5d627c : p.ground;
   const groundMesh = new THREE.Mesh(
     new THREE.CylinderGeometry(43, 43, 1.5, 64, 1, true),
@@ -309,7 +346,30 @@ export function buildWorld(id: string): BuiltWorld {
             0.13 * scale,
           );
     }
-    occupy(x, z, (acacia ? 2.2 : 1.65) * scale, 4.4 * scale, 0.5 * scale);
+    // Canopies are solid underfoot, so a landing stays on the leaves instead of sliding off.
+    const s = scale;
+    if (snowy) {
+      // Rings follow the pine's tiers up to a perch at the tip.
+      occupy(x, z, 1.65 * s, 4.4 * s, 0.5 * s, { y: 1.7 * s, radius: s });
+      for (const [radius, y] of [
+        [0.75, 2.4],
+        [0.5, 3],
+        [0.25, 3.7],
+      ])
+        ledge(x, z, { y: y * s, radius: radius * s });
+    } else if (palm) occupy(x, z, 1.65 * s, 4.4 * s, 0.5 * s, { y: 2.95 * s, radius: 1.6 * s });
+    else {
+      occupy(
+        x,
+        z,
+        (acacia ? 2.2 : 1.65) * s,
+        4.4 * s,
+        0.5 * s,
+        acacia ? { y: 3.45 * s, half: [2.1 * s, 1.5 * s] } : { y: 3.65 * s, radius: 1.4 * s },
+      );
+      // The small upper tuft is a second, higher place to land.
+      ledge(x - 0.3 * s, z + 0.1, { y: (acacia ? 3.85 : 4.2) * s, half: [0.95 * s, 0.9 * s] });
+    }
   }
   function crystal(x: number, z: number, color: number, scale = 1) {
     for (let k = 0; k < 3; k++) {
@@ -329,7 +389,7 @@ export function buildWorld(id: string): BuiltWorld {
     rock(0x81cdc6, x, 1.2 * scale, z, 0.8 * scale, 0.35 * scale, 0.8 * scale);
     for (let i = 0; i < 3; i++)
       box(0xf4e8c2, x + (i - 1) * 0.3 * scale, 1.5 * scale, z, 0.13, 0.06, 0.13);
-    occupy(x, z, 0.9 * scale, 1.55 * scale, 0.24 * scale);
+    occupy(x, z, 0.9 * scale, 1.55 * scale, 0.24 * scale, { y: 1.5 * scale, radius: 0.75 * scale });
   }
   function coral(x: number, z: number, color: number) {
     box(color, x, 0.6, z, 0.25, 1.2, 0.25);
@@ -352,26 +412,43 @@ export function buildWorld(id: string): BuiltWorld {
     stamp('cylinder', 0xa1ccd9, [-22, 0.045, -10], [10, 0.08, 7]);
     occupy(-22, -10, 5.5);
     rock(0xf7f7ed, 16, 1.7, -37, 3, 2.2, 2.6);
-    occupy(16, -37, 3.2, 4, 2.8);
+    occupy(16, -37, 3.2);
+    tiers(16, -37, [
+      [2.8, 2.2],
+      [1.6, 3.55],
+    ]);
     box(0xb1d5db, 16, 0.8, -34.65, 1.2, 1.6, 0.35);
     for (const s of [-1, 1]) {
       rock(0xf3f5eb, 20 + s * 1.6, 0.65, -19, 0.9, 0.7, 0.9);
       rock(0xf3f5eb, 20 + s * 1.6, 1.5, -19, 0.62, 0.62, 0.62);
       box(0x5b7890, 20 + s * 1.6, 2.05, -19, 1, 0.15, 0.8);
-      occupy(20 + s * 1.6, -19, 1, 2.2, 0.85);
+      occupy(20 + s * 1.6, -19, 1);
+      // Shoulders, then the hat.
+      tiers(20 + s * 1.6, -19, [
+        [0.85, 1.25],
+        [0.5, 2.13],
+      ]);
     }
   } else if (id === 'savannah') {
     stamp('cylinder', 0x83b8af, [-20, 0.04, -7], [10, 0.07, 7]);
     occupy(-20, -7, 5.4);
     tree(14, -37, 1.3);
+    // Overlapping boulders make a staircase a jumping player can climb.
     for (let i = 0; i < 4; i++) {
       rock(0xc3a477, -15 + i * 2, 0.8 + i * 0.3, -36, 2, 1.3 + i * 0.3, 2.6);
-      occupy(-15 + i * 2, -36, 2, 3.5, 1.7);
+      occupy(-15 + i * 2, -36, 2);
+      tiers(-15 + i * 2, -36, [
+        [1.7, 0.8 + i * 0.3],
+        [1.05, 1.9 + i * 0.555],
+      ]);
     }
   } else if (id === 'desert') {
-    for (let k = 0; k < 5; k++)
+    // Each pyramid step is its own solid block, so the pyramid can be climbed step by step.
+    for (let k = 0; k < 5; k++) {
       box(k % 2 ? 0xdab37b : 0xcba374, -17, k * 0.9 + 0.45, -37, 8 - k * 1.4, 0.95, 5 - k * 0.85);
-    occupy(-17, -37, 4.7, 4.8, 4.2);
+      slab(-17, -37, [4 - k * 0.7, 2.5 - k * 0.425], k * 0.9 + 0.925);
+    }
+    occupy(-17, -37, 4.7);
     stamp('cylinder', 0x77bdad, [20, 0.04, -2], [8, 0.07, 6]);
     tree(26, 1, 1.1);
     occupy(20, -2, 4.4);
@@ -380,8 +457,9 @@ export function buildWorld(id: string): BuiltWorld {
       occupy(17 + s * 2, -35, 0.95, 5.4, 0.85);
     }
     box(0xe7c58f, 17, 5, -35, 5.5, 0.8, 1.5);
+    ledge(17, -35, { y: 5.4, half: [2.75, 0.75] });
   } else if (id === 'beach') {
-    buildBeach(group, { clear, occupy });
+    buildBeach(group, { clear, occupy, slab });
   } else if (id === 'ocean') {
     // An empty toy boat tips against a soft toy reef when the siren sings.
     const sirenBoat = new THREE.Group();
@@ -425,14 +503,24 @@ export function buildWorld(id: string): BuiltWorld {
     for (const x of [-21, -17, -13]) {
       stamp('cylinder', 0xd2e1c5, [x, 2.5, -36], [1.1, 5, 1.1]);
       box(0xe5e6c7, x, 5.05, -36, 1.7, 0.45, 1.7);
-      occupy(x, -36, 1.1, 7.3, 0.85);
+      occupy(x, -36, 1.1, 7.3, 0.85, { y: 5.8, radius: 0.85 });
     }
     box(0xc5dcca, -17, 5.5, -36, 10, 0.6, 1.7);
     cone(0x7da9a6, -17, 6.5, -36, 7, 1.8);
+    // The lintel and the rings of its pointed roof hold a swimmer who lands on the temple.
+    ledge(-17, -36, { y: 5.8, half: [5, 0.85] });
+    for (const [radius, y] of [
+      [2.5, 6.1],
+      [1.5, 6.6],
+      [0.6, 7.1],
+    ])
+      ledge(-17, -36, { y, radius });
     box(0x9f826b, 19, 0.8, -36, 8, 1.6, 3, -0.18);
     box(0xcbb18a, 19, 3.7, -36, 0.25, 6, 0.25);
     box(0xe5d5b5, 20.3, 4.6, -36, 2.5, 2.5, 0.12, -0.08);
-    for (const x of [16, 19, 22]) occupy(x, -36, 1.8, x === 19 ? 6.7 : 1.6, 1.65);
+    for (const x of [16, 19, 22]) occupy(x, -36, 1.8, 1.6, 1.65);
+    // A lookout perch on top of the mast.
+    occupy(19, -36, 0.3, 6.7, 0.3);
     for (let i = 0; i < 9; i++) {
       const x = 11 + i * 1.7;
       const z = -38 + random() * 2;
@@ -443,7 +531,16 @@ export function buildWorld(id: string): BuiltWorld {
     }
   } else if (id === 'volcano') {
     cone(0x59576c, -17, 3.6, -36, 10, 9);
-    occupy(-17, -36, 5.2, 8.7, 4.5);
+    occupy(-17, -36, 5.2);
+    // The lower slope, the overhanging rim, then the glowing crater lid at the summit.
+    tiers(-17, -36, [
+      [4.5, 0.6],
+      [4, 1.3],
+      [3.6, 2],
+      [3, 6.8],
+      [2.4, 7.3],
+      [1.85, 8.6],
+    ]);
     cone(0x9a6a6d, -17, 7.6, -36, 6, 2);
     stamp('cylinder', 0xffb770, [-17, 8.6, -36], [3.7, 0.08, 3.7], 0, true);
     for (let i = 0; i < 7; i++) {
@@ -453,7 +550,13 @@ export function buildWorld(id: string): BuiltWorld {
     for (let i = 0; i < 8; i++) box(0xc3a08e, -29 + i, 0.08, -9, 0.9, 0.16, 3.2);
     for (const s of [-1, 1]) {
       cone(0x655b70, 18 + s * 3, 2, -36, 3.2, 5);
-      occupy(18 + s * 3, -36, 1.8, 4.5, 1.5);
+      occupy(18 + s * 3, -36, 1.8);
+      tiers(18 + s * 3, -36, [
+        [1.5, 0.4],
+        [1.15, 1.45],
+        [0.8, 2.55],
+        [0.45, 3.8],
+      ]);
     }
   } else if (id === 'underground') {
     const { floorTiles, wallTiles } = buildCaveFloorplan();
@@ -479,9 +582,10 @@ export function buildWorld(id: string): BuiltWorld {
         const x = arch.x + Math.cos(arch.yaw) * offset;
         const z = arch.z - Math.sin(arch.yaw) * offset;
         box(color, x, 1.1, z, 0.65, 2.2, 0.65, arch.yaw);
-        occupy(x, z, 0.48, 4.45, 0.48);
+        occupy(x, z, 0.48, 4.45, 0.48, { y: 2.2, radius: 0.48 });
         stamp('rounded', arch.secret ? 0xd2b9eb : 0xe9dcaa, [x, 1.5, z], [0.3, 0.4, 0.3], 0, true);
       }
+      ledge(arch.x, arch.z, { y: 4.45, radius: 0.5 });
     }
     // Inlaid breadcrumbs follow every bend. The hidden branch has sparse violet stones.
     for (const tunnel of CAVE_LAYOUT.tunnels) {
@@ -522,7 +626,7 @@ export function buildWorld(id: string): BuiltWorld {
       [-22, 18.5, 1.05],
     ]) {
       crystal(x, z, z > 10 ? 0xcdb3ed : 0xa4dce0, size);
-      occupy(x, z, 0.7 * size, 1.5 * size, 0.55 * size);
+      occupy(x, z, 0.7 * size, 1.5 * size, 0.55 * size, { y: 1.35 * size, radius: 0.55 * size });
     }
     stamp('cylinder', 0xddd0e6, [-25, 0.065, 17], [4.2, 0.05, 4.2]);
     for (const exit of CAVE_LAYOUT.exits) {
@@ -535,7 +639,8 @@ export function buildWorld(id: string): BuiltWorld {
       crystal(s * 16, -35, 0xe0b4e6, 1.8);
       rock(0xaa90b3, s * 22, 6, -37, 3.5, 1.2, 3);
       cone(0x6c6383, s * 22, 4.8, -37, 3, 2);
-      occupy(s * 16, -35, 1.4, 6.2, 1.15);
+      occupy(s * 16, -35, 1.4);
+      slab(s * 16, -35, [0.8, 0.8], 6);
       occupy(s * 22, -37, 3.7);
     }
     stamp('cylinder', 0xb7a5d0, [16, 0.08, -15], [9, 0.1, 9], 0, true);
@@ -545,7 +650,7 @@ export function buildWorld(id: string): BuiltWorld {
         z = -15 + Math.cos(a) * 5;
       if (gameplayClear(x, z, 0.9)) {
         crystal(x, z, 0xa6dfd3, 0.8);
-        occupy(x, z, 0.9, 1.4, 0.6);
+        occupy(x, z, 0.9, 1.4, 0.6, { y: 1.08, radius: 0.6 });
       }
     }
   } else if (id === 'city') {
@@ -569,7 +674,10 @@ export function buildWorld(id: string): BuiltWorld {
         for (let row = 0; row < Math.floor(h / 1.5); row++)
           for (const col of [-1, 0, 1])
             box(0xe3e5c4, x + col * 1.3, 1 + row * 1.5, z + 2.8, 0.7, 0.85, 0.06);
-        occupy(x, z, 3.9, h + 0.3, 3.6);
+        occupy(x, z, 3.9);
+        // The whole flat roof holds a landing, and the rooftop block is one more step up.
+        slab(x, z, [2.85, 3], h + 0.3);
+        slab(x, z, [1.4, 1.3], h + 0.95);
       }
     box(0xcac2a5, 0, 0.13, -20, 12, 0.2, 10);
     for (let i = 0; i < 6; i++)
@@ -595,10 +703,10 @@ export function buildWorld(id: string): BuiltWorld {
       occupy(x, z, 1, 1.6, 0.65);
     } else if (id === 'rifts') {
       crystal(x, z, i % 2 ? 0x9dd8cd : 0xc5a1d5, scale);
-      occupy(x, z, scale, 1.5 * scale, 0.7 * scale);
+      occupy(x, z, scale, 1.5 * scale, 0.7 * scale, { y: 1.35 * scale, radius: 0.7 * scale });
     } else {
       rock(p.cliff, x, 0.4, z, scale, scale * 0.65, scale * 0.8);
-      occupy(x, z, scale, 0.4 + scale * 0.65, scale * 0.8);
+      occupy(x, z, scale, 0.4 + scale * 0.65, scale * 0.8, { y: 0.4 + scale * 0.55 });
     }
   }
   // Low planting islands supply texture and color variation without extra movement barriers.
@@ -684,6 +792,7 @@ export function buildWorld(id: string): BuiltWorld {
   return {
     group,
     obstacles,
+    ledges,
     hazards,
     water: id === 'ocean' || id === 'beach',
     ground: p.ground,

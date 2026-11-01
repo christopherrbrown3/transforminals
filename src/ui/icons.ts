@@ -19,7 +19,10 @@ export function icon(name: string, size = 24) {
   };
   return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] ?? paths.paw}</svg>`;
 }
-export function portrait(id: string, color: string) {
+export function portrait(id: string, color: string, boss = false) {
+  // Beaten bosses get a round grinning face with a gold star badge.
+  if (boss)
+    return `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7 41V24Q7 7 24 7t17 17v17Z" fill="${color}"/><circle cx="17" cy="23" r="5" fill="#fff2d8"/><circle cx="31" cy="23" r="5" fill="#fff2d8"/><path d="M17 23h1m13 0h1" stroke="#294a43" stroke-linecap="round" stroke-width="4"/><path d="M15 32q9 7 18 0Z" fill="#294a43"/><path d="m19 32 2 3 2-3m2 0 2 3 2-3" fill="#fff2d8"/><path d="m40 2 2.1 4.3 4.7.7-3.4 3.3.8 4.7-4.2-2.2-4.2 2.2.8-4.7-3.4-3.3 4.7-.7Z" fill="#ffd476" stroke="#294a43" stroke-width="1.2"/></svg>`;
   if (id === 'human')
     return '<svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#68a28b" d="M6 48V36q18-16 36 0v12"/><rect x="12" y="8" width="24" height="28" rx="9" fill="#f5caa3"/><path fill="#624b3f" d="M10 18V8q14-13 28 0v12l-7-8-11 5Z"/><path stroke="#324d48" stroke-width="3" d="M19 23h1m8 0h1"/></svg>';
   const flying = ['falcon', 'bat', 'glow-moth'].includes(id),

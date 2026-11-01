@@ -329,43 +329,30 @@ export function buildBoss(id: string, root: THREE.Group): void {
   root.userData.bossRig = rig;
   (builders[id] ?? demonLizard)(root, head, rig);
 
-  // The level landing cap stays independent of the expressive head's idle tilt.
-  // Its exact top preserves the existing jump physics: 2.49 / 3.39 before runtime scaling.
-  const radius = id === 'demon-lizard' ? 0.72 : 0.59;
-  const top = headY + 0.54;
-  mesh(root, new THREE.CylinderGeometry(radius, radius * 0.94, 0.14, 24), GOLD, [0, top - 0.07, 0]);
-  const inset = mesh(
-    root,
-    new THREE.CylinderGeometry(radius * 0.77, radius * 0.77, 0.012, 24),
-    0xb78135,
-    [0, top - 0.005, 0],
-  );
-  inset.name = 'landing target';
-  const star = panel(
-    root,
-    CREAM,
-    Array.from({ length: 10 }, (_, i) => {
-      const angle = (i * Math.PI) / 5;
-      const r = radius * (i % 2 ? 0.28 : 0.57);
-      return [Math.sin(angle) * r, Math.cos(angle) * r];
-    }),
-    0.008,
-  );
-  star.rotation.x = -Math.PI / 2;
-  star.position.y = top;
-  root.userData.headHeight = top;
+  // Head stomps land on the top of the boss's own head or hat, measured straight down
+  // through its middle.
+  root.updateMatrixWorld(true);
+  const ray = new THREE.Raycaster(new THREE.Vector3(0, 10, 0), new THREE.Vector3(0, -1, 0));
+  root.userData.headHeight = ray.intersectObject(head, true)[0]?.point.y ?? headY + 0.5;
 }
 
-/** Small appendage motion leaves the root, landing cap, and gameplay collider untouched. */
-export function animateBoss(root: THREE.Group, time: number): void {
+/** Small appendage motion leaves the root and the head-stomp height untouched. A boss being
+ * played as a form also swings its legs and arms while walking. */
+export function animateBoss(root: THREE.Group, time: number, moving = false): void {
   const rig = root.userData.bossRig as BossRig;
   const slow = Math.sin(time * 1.8);
   if (rig.head) rig.head.rotation.z = slow * 0.025;
   rig.arms.forEach((arm, i) => {
-    arm.rotation.z = Math.sin(time * 2.1 + i * 1.7) * 0.08;
+    arm.rotation.z = moving
+      ? Math.sin(time * 11 + i * Math.PI) * 0.22
+      : Math.sin(time * 2.1 + i * 1.7) * 0.08;
   });
   rig.legs.forEach((leg, i) => {
-    leg.rotation.x = Math.sin(time * 1.8 + i * Math.PI) * 0.018;
+    // A walking foot lifts and tips its toe up, while the planted foot stays flat.
+    const lift = moving ? Math.max(0, Math.sin(time * 11 + i * Math.PI)) : 0;
+    leg.userData.restY ??= leg.position.y;
+    leg.position.y = leg.userData.restY + lift * 0.16;
+    leg.rotation.x = moving ? lift * 0.25 : Math.sin(time * 1.8 + i * Math.PI) * 0.018;
   });
   rig.wings.forEach((wing, i) => {
     wing.rotation.y = (i ? -1 : 1) * (0.12 + slow * 0.1);

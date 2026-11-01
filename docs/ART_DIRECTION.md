@@ -24,7 +24,8 @@ The environment keeps a lower contrast than faces, rescue effects, and controls.
 - Every model faces negative Z. Feet sit at Y=0. Human height is approximately 1.9 units including hair; the custom fox is 1.885 units including ears. The game enlarges giant forms and the final boss at runtime.
 - Eyes use warm whites, deep evergreen pupils, and tiny highlights. Oversized ears, muzzles, feet, and tails make animals identifiable at the normal play camera distance.
 - The fox has a long vanilla-tipped tail, cream cheeks and chest, dark socks, pointed ears, and a button nose. Arctic fox shares the silhouette with a snowy coat. Tiger stripes, giraffe spots, cow patches, lion mane, camel hump, turtle shell, whale-shark spots, and reptile dorsal plates distinguish forms.
-- Bosses have conspicuous golden landing crowns. `group.userData.headHeight` gives the exact crown collision height: 2.49 for mini-bosses and 3.39 for the final lizard. Their large faces remain readable during movement.
+- Bosses are stomped on their own heads or hats; there is no separate landing marker. `group.userData.headHeight` is measured straight down through the middle of the head when the model is built: about 2.33–2.44 for mini-bosses and 3.18 for the final lizard before its 1.7 runtime scale. Their large faces remain readable during movement.
+- A beaten boss becomes a playable form drawn from the same sculpture at 0.8 scale (just taller than Calvin), or 0.6 for a giant form, which the game then doubles. Walking lifts each foot and swings the arms.
 - Franchise-inspired fantasies use original designs: Bramblejaw and Boltback are original giant reptile/mechanical reptile models. No downloaded or recreated franchise models are included.
 
 ## Meshes and materials
@@ -100,9 +101,9 @@ The world map is a cream field-guide atlas over patterned pale water. Original m
 
 `bossModels.ts` gives each encounter an original toy silhouette: Sproutzilla has a leafy tail, broad muzzle and segmented belly; Sir Slush-a-lot wears mittens and a fringed scarf; the Sand Witch has layered fillings, a plum hat and olive wand; Admiral Flushington has an open seat, naval cap and moustache; Lava Lump has peach seams between basalt plates and popcorn tufts; the Demon Lizard has ribbed wings, a curled tail and small vanilla horns. Large eyes blink, while arms, wings, tails and the scarf move gently. Gentle-motion settings hold these appendages in a stationary pose.
 
-Each boss wears a flat golden landing cap with a cream star. The cap stays level independently of the head tilt, at the existing 2.49-unit mini-boss or 3.39-unit final-boss height; the finale retains its 1.7 runtime scale. Hats and horns leave the central landing footprint clear. On short landscape screens at least 700 pixels wide, the hearts panel moves below the arena during play so it does not cover the final boss's face or star.
+The golden landing caps were removed on November 1 at the user's request; stomps now land on the head or hat itself. On short landscape screens at least 700 pixels wide, the hearts panel moves below the arena during play so it does not cover the final boss's face.
 
-The six sculptures use 4,258–7,224 triangles and 8–11 batched meshes each. They have no texture or remote-asset dependencies. The rendered model study is `assets/source/boss-gallery.png`; browser and interaction evidence is recorded in the development log. These counts do not establish physical iPad frame rate.
+Before the caps were removed, the six sculptures used 4,258–7,224 triangles and 8–11 batched meshes each. They have no texture or remote-asset dependencies. The rendered model study is `assets/source/boss-gallery.png`; browser and interaction evidence is recorded in the development log. These counts do not establish physical iPad frame rate.
 
 ## Region atmosphere — October 31
 

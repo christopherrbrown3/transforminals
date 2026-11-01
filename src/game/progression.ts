@@ -1,4 +1,4 @@
-import { CREATURES } from './data';
+import { BOSS_FORMS, CREATURES, HUMAN } from './data';
 export const SAVE_VERSION = 3;
 export interface SaveData {
   version: number;
@@ -30,8 +30,13 @@ export function rescue(save: SaveData, id: string) {
   save.rescued.push(id);
   return true;
 }
+/** Rescued animals and defeated bosses (whose IDs `defeated` already validates). */
 export function canTransform(save: SaveData, id: string) {
-  return id === 'human' || save.rescued.includes(id);
+  return id === 'human' || save.rescued.includes(id) || save.defeated.includes(id);
+}
+/** The transformation list: Calvin, rescued animals, then the bosses beaten so far. */
+export function unlockedForms(save: SaveData) {
+  return [HUMAN, ...CREATURES, ...BOSS_FORMS].filter((c) => canTransform(save, c.id));
 }
 export function bossHearts(hits: number, total = 5) {
   return Math.max(0, total - Math.max(0, Math.floor(hits)));
